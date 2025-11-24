@@ -28,7 +28,7 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useRef, useEffect } from 'react';
         import { createRoot } from 'react-dom/client';
-        import { Home, Loader2, Trophy, Skull, Dices, Swords, Gem, Shield, Crosshair, Zap, Coins, Lock, ShoppingBag, Package, Star, Gauge, Ghost, Flame, Target, Cpu } from 'lucide-react';
+        import { Home, Loader2, Trophy, Skull, Dices, Swords, Gem, Shield, Crosshair, Zap, Coins, Lock, ShoppingBag, Package, Star, Gauge, Ghost, Flame, Target, Cpu, HelpCircle, X } from 'lucide-react';
 
         // --- TYPES & CONSTANTS ---
         const TileType = {
@@ -222,9 +222,9 @@
         // --- GAME CANVAS COMPONENT ---
         const TILE_SIZE = 48;
         const BULLET_SPEED = 10;
-        const GEM_SPAWN_RATE = 120;
+        const GEM_SPAWN_RATE = 120; // Frames for gem spawn
         const GEM_WIN_COUNT = 10;
-        const HEIST_SAFE_HP = 6000;
+        const HEIST_SAFE_HP = 3000; // Reduced from 6000 for faster matches
         const RESPAWN_TIME = 180;
 
         const GameCanvas = ({ map, onGameOver, onExit, characterClass, gameMode, inputState, difficulty }) => {
@@ -241,6 +241,9 @@
           const gameStateRef = useRef('playing');
           const lastInputTypeRef = useRef('mouse');
           const spawnPointsRef = useRef({ player: [], enemy: [] });
+          
+          const gemSpawnTimerRef = useRef(GEM_SPAWN_RATE);
+          const spawnerPosRef = useRef(null);
 
           const [playerHp, setPlayerHp] = useState(100);
           const [playerMaxHp, setPlayerMaxHp] = useState(100);
@@ -260,6 +263,8 @@
             botsRef.current = [];
             safeboxesRef.current = [];
             frameCountRef.current = 0;
+            gemSpawnTimerRef.current = GEM_SPAWN_RATE;
+            spawnerPosRef.current = null;
             
             const pSpawns = [];
             const eSpawns = [];
@@ -271,6 +276,7 @@
                 if (tile === TileType.SPAWN_ENEMY) eSpawns.push({ x, y });
                 if (tile === TileType.SAFE_PLAYER) safeSpawns.push({ x, y, team: 'player' });
                 if (tile === TileType.SAFE_ENEMY) safeSpawns.push({ x, y, team: 'enemy' });
+                if (tile === TileType.GEM_SPAWNER) spawnerPosRef.current = { x, y };
               });
             });
 
@@ -434,13 +440,34 @@
                 }
             });
 
-            if (gameMode === 'gem_grab' && frameCountRef.current % GEM_SPAWN_RATE === 0) {
-               let spawner = null;
-               map.tiles.forEach((row, y) => { row.forEach((t, x) => { if (t === TileType.GEM_SPAWNER) spawner = {x, y}; }); });
-               if (spawner && gemsRef.current.length < 20) {
-                   gemsRef.current.push({ id: `gem_${Date.now()}`, x: spawner.x * TILE_SIZE + TILE_SIZE/2, y: spawner.y * TILE_SIZE + TILE_SIZE/2, collected: false });
+            if (gameMode === 'gem_grab') {
+               gemSpawnTimerRef.current--;
+               if (gemSpawnTimerRef.current <= 0) {
+                   if (spawnerPosRef.current && gemsRef.current.length < 29) {
+                       const angle = Math.random() * Math.PI * 2;
+                       const speed = 1.5 + Math.random(); // Pop out speed
+                       gemsRef.current.push({ 
+                           id: `gem_${Date.now()}`, 
+                           x: spawnerPosRef.current.x * TILE_SIZE + TILE_SIZE/2, 
+                           y: spawnerPosRef.current.y * TILE_SIZE + TILE_SIZE/2, 
+                           vx: Math.cos(angle) * speed,
+                           vy: Math.sin(angle) * speed,
+                           collected: false 
+                       });
+                   }
+                   gemSpawnTimerRef.current = GEM_SPAWN_RATE;
                }
             }
+            
+            // Gem Physics
+            gemsRef.current.forEach(g => {
+                if (!g.collected) {
+                    if (g.vx) g.x += g.vx;
+                    if (g.vy) g.y += g.vy;
+                    if (g.vx) g.vx *= 0.92; // Friction
+                    if (g.vy) g.vy *= 0.92;
+                }
+            });
 
             if (!player.isDead) {
                 let dx = 0, dy = 0;
@@ -465,7 +492,6 @@
                     player.angle = Math.atan2(jAim.y, jAim.x); 
                 } else if (inputState.current.shootRequest) {
                    // Keep aim angle from previous frame if we are shooting.
-                   // Do not let movement logic below override the angle.
                 } else if (lastInputTypeRef.current === 'joystick' && (dx!==0 || dy!==0)) { 
                     player.angle = Math.atan2(dy, dx); 
                 } else if (mouseRef.current) { 
@@ -509,7 +535,6 @@
                     if (target?.id && dist < 250 && bot.stats.name === 'Sniper') move = false;
                     
                     if (move && dist > 10) {
-                        // AI Stuck Detection & Unstuck Logic
                         const dMove = Math.hypot(bot.x - (bot.lastX || bot.x), bot.y - (bot.lastY || bot.y));
                         bot.lastX = bot.x; bot.lastY = bot.y;
                         
@@ -531,7 +556,6 @@
                         if (!checkWallCollision(bot.x + mx, bot.y, bot.radius)) { bot.x += mx; moved = true; }
                         if (!checkWallCollision(bot.x, bot.y + my, bot.radius)) { bot.y += my; moved = true; }
                         
-                        // If standard slide fails, try jitter
                         if (!moved && bot.stuckTime < 15) {
                              const rAngle = angle + (Math.random() > 0.5 ? 1.5 : -1.5);
                              const rx = Math.cos(rAngle) * bot.speed;
@@ -568,7 +592,14 @@
                             if (killer) gainXp(killer, 80);
                             if (!ent.isSafe) {
                                 const drop = Math.floor(ent.gems/2)+2;
-                                for(let i=0; i<drop; i++) gemsRef.current.push({id:`d_${Date.now()}_${i}`, x:ent.x+(Math.random()*40-20), y:ent.y+(Math.random()*40-20), collected:false});
+                                for(let i=0; i<drop; i++) gemsRef.current.push({
+                                    id:`d_${Date.now()}_${i}`, 
+                                    x:ent.x+(Math.random()*40-20), 
+                                    y:ent.y+(Math.random()*40-20), 
+                                    collected:false,
+                                    vx: (Math.random()-0.5)*4,
+                                    vy: (Math.random()-0.5)*4
+                                });
                                 ent.gems = 0;
                             }
                         }
@@ -645,6 +676,19 @@
                       else if (tile === TileType.GEM_SPAWNER) { ctx.fillStyle = '#1e1b4b'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2, py+TILE_SIZE/2, 12, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 2; ctx.stroke(); }
                       else { ctx.fillStyle = '#475569'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE); }
                   }
+              }
+
+              if (gameMode === 'gem_grab' && spawnerPosRef.current) {
+                  const sx = spawnerPosRef.current.x * TILE_SIZE + TILE_SIZE/2;
+                  const sy = spawnerPosRef.current.y * TILE_SIZE + TILE_SIZE/2;
+                  
+                  // Progress Ring
+                  const progress = 1 - (gemSpawnTimerRef.current / GEM_SPAWN_RATE);
+                  ctx.lineWidth = 4;
+                  ctx.strokeStyle = 'rgba(168, 85, 247, 0.2)';
+                  ctx.beginPath(); ctx.arc(sx, sy, 22, 0, Math.PI*2); ctx.stroke();
+                  ctx.strokeStyle = '#a855f7';
+                  ctx.beginPath(); ctx.arc(sx, sy, 22, -Math.PI/2, -Math.PI/2 + (Math.PI*2 * progress)); ctx.stroke();
               }
 
               const entities = [player, ...botsRef.current, ...safeboxesRef.current].sort((a,b)=>a.y-b.y);
@@ -749,6 +793,58 @@
           { id: 'big', name: 'Big Box', price: 300, minCoins: 60, maxCoins: 250, color: 'bg-purple-600' },
           { id: 'mega', name: 'Mega Box', price: 800, minCoins: 250, maxCoins: 750, color: 'bg-yellow-500' },
         ];
+        
+        const HelpModal = ({ onClose }) => (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-slate-800 border border-slate-600 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+              <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
+              <h2 className="text-2xl font-black text-white mb-4 uppercase italic flex items-center gap-2"><HelpCircle size={24} className="text-yellow-400" /> How to Play</h2>
+              
+              <div className="space-y-4 text-slate-300 text-sm">
+                <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
+                   <div className="flex gap-2 shrink-0">
+                     <div className="w-10 h-10 rounded-full border-2 border-blue-500 bg-slate-800 flex items-center justify-center text-[10px] text-blue-200 font-bold">Move</div>
+                     <div className="w-10 h-10 rounded-full border-2 border-red-500 bg-slate-800 flex items-center justify-center text-[10px] text-red-200 font-bold">Aim</div>
+                   </div>
+                   <div>
+                     <p className="font-bold text-white mb-1">Controls</p>
+                     <p className="text-xs leading-relaxed">Left Joystick to Move. Right Joystick to Aim & Shoot. Release to fire.</p>
+                   </div>
+                </div>
+
+                <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
+                   <div className="w-12 flex justify-center"><Gem className="text-purple-400 shrink-0" size={28} /></div>
+                   <div>
+                     <p className="font-bold text-purple-400 mb-1">Gem Grab</p>
+                     <p className="text-xs leading-relaxed">Collect 10 Gems from the center mine. Hold them for the countdown to win!</p>
+                   </div>
+                </div>
+
+                <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
+                   <div className="w-12 flex justify-center relative">
+                     <Shield className="text-red-400 shrink-0" size={28} />
+                   </div>
+                   <div>
+                     <p className="font-bold text-red-400 mb-1">Heist</p>
+                     <p className="text-xs leading-relaxed">Destroy the Enemy Safe (Red). Defend your Safe (Blue) from enemies.</p>
+                   </div>
+                </div>
+                
+                 <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
+                   <div className="w-12 flex justify-center"><div className="w-8 h-8 bg-green-500/50 rounded flex items-center justify-center border border-green-500"><div className="w-6 h-6 bg-green-600 rounded-sm"></div></div></div>
+                   <div>
+                     <p className="font-bold text-green-400 mb-1">Tactics</p>
+                     <p className="text-xs leading-relaxed">Hide in green bushes to ambush. Walls block enemy bullets.</p>
+                   </div>
+                </div>
+              </div>
+
+              <button onClick={onClose} className="mt-6 w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black uppercase tracking-wider py-3 rounded-xl shadow-lg transition-transform active:scale-95">
+                Got it!
+              </button>
+            </div>
+          </div>
+        );
 
         const App = () => {
           const [screen, setScreen] = useState('menu');
@@ -762,6 +858,7 @@
           const [selectedChar, setSelectedChar] = useState('speedy');
           const [selectedMode, setSelectedMode] = useState('gem_grab');
           const [difficulty, setDifficulty] = useState('normal');
+          const [showTutorial, setShowTutorial] = useState(false);
 
           useEffect(() => {
             const savedCoins = localStorage.getItem('brawl_coins');
@@ -843,12 +940,17 @@
 
           return (
             <div className="w-screen h-screen bg-slate-900 text-white font-sans overflow-hidden select-none touch-none">
+              {showTutorial && <HelpModal onClose={() => setShowTutorial(false)} />}
+              
               {screen === 'menu' && (
                 <div className="w-full h-full flex flex-col items-center justify-start p-4 relative overflow-y-auto">
                   <div className="z-10 w-full max-w-2xl bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-slate-700 mt-4 mb-20">
                      <div className="flex justify-between items-start mb-6">
                          <div><h1 className="text-4xl font-black italic tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-br from-yellow-400 to-orange-600 drop-shadow-sm">Brawl Arena</h1><div className="mt-2 flex items-center gap-2"><div className="bg-blue-600 text-xs font-bold px-2 py-0.5 rounded text-white flex items-center gap-1 shadow-sm border border-blue-400"><Star size={10} className="fill-white"/> LVL {level}</div><div className="w-24 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-600"><div className="h-full bg-blue-400" style={{width: `${(xp / getXpForNextLevel(level)) * 100}%`}}></div></div></div></div>
-                         <div className="bg-slate-900 px-4 py-2 rounded-full border border-yellow-600/50 flex items-center gap-2 shadow-inner"><Coins className="text-yellow-400 fill-yellow-400" size={20} /><span className="font-black text-xl text-yellow-100">{coins}</span></div>
+                         <div className="flex gap-2">
+                             <button onClick={() => setShowTutorial(true)} className="bg-slate-700 hover:bg-slate-600 w-10 h-10 rounded-full flex items-center justify-center border border-slate-500 text-slate-300 shadow-lg"><HelpCircle size={20} /></button>
+                             <div className="bg-slate-900 px-4 py-2 rounded-full border border-yellow-600/50 flex items-center gap-2 shadow-inner"><Coins className="text-yellow-400 fill-yellow-400" size={20} /><span className="font-black text-xl text-yellow-100">{coins}</span></div>
+                         </div>
                      </div>
                      <div className="grid md:grid-cols-2 gap-8">
                          <div>

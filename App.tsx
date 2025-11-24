@@ -1,10 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { GameCanvas } from './components/GameCanvas';
 import { Joystick } from './components/Joystick';
 import { generateGameMap } from './services/geminiService';
 import { GameMap, CharacterClass, GameModeType, CHARACTERS, Difficulty } from './types';
-import { Loader2, Trophy, Skull, Dices, Swords, Gem, Shield, Crosshair, Zap, Coins, Lock, ShoppingBag, Package, Star, Gauge } from 'lucide-react';
+import { Loader2, Trophy, Skull, Dices, Swords, Gem, Shield, Crosshair, Zap, Coins, Lock, ShoppingBag, Package, Star, Gauge, HelpCircle, X, Ghost, Flame, Target, Cpu } from 'lucide-react';
 
 // Box Configuration
 const BOXES = [
@@ -12,6 +11,58 @@ const BOXES = [
   { id: 'big', name: 'Big Box', price: 300, minCoins: 200, maxCoins: 600, color: 'bg-purple-600' },
   { id: 'mega', name: 'Mega Box', price: 800, minCoins: 600, maxCoins: 2000, color: 'bg-yellow-500' },
 ];
+
+const HelpModal = ({ onClose }: { onClose: () => void }) => (
+  <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="bg-slate-800 border border-slate-600 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+      <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
+      <h2 className="text-2xl font-black text-white mb-4 uppercase italic flex items-center gap-2"><HelpCircle size={24} className="text-yellow-400" /> How to Play</h2>
+      
+      <div className="space-y-4 text-slate-300 text-sm">
+        <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
+           <div className="flex gap-2 shrink-0">
+             <div className="w-10 h-10 rounded-full border-2 border-blue-500 bg-slate-800 flex items-center justify-center text-[10px] text-blue-200 font-bold">Move</div>
+             <div className="w-10 h-10 rounded-full border-2 border-red-500 bg-slate-800 flex items-center justify-center text-[10px] text-red-200 font-bold">Aim</div>
+           </div>
+           <div>
+             <p className="font-bold text-white mb-1">Controls</p>
+             <p className="text-xs leading-relaxed">Left Joystick to Move. Right Joystick to Aim & Shoot. Release to fire.</p>
+           </div>
+        </div>
+
+        <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
+           <div className="w-12 flex justify-center"><Gem className="text-purple-400 shrink-0" size={28} /></div>
+           <div>
+             <p className="font-bold text-purple-400 mb-1">Gem Grab</p>
+             <p className="text-xs leading-relaxed">Collect 10 Gems from the center mine. Hold them for the countdown to win!</p>
+           </div>
+        </div>
+
+        <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
+           <div className="w-12 flex justify-center relative">
+             <Shield className="text-red-400 shrink-0" size={28} />
+           </div>
+           <div>
+             <p className="font-bold text-red-400 mb-1">Heist</p>
+             <p className="text-xs leading-relaxed">Destroy the Enemy Safe (Red). Defend your Safe (Blue) from enemies.</p>
+           </div>
+        </div>
+        
+         <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
+           <div className="w-12 flex justify-center"><div className="w-8 h-8 bg-green-500/50 rounded flex items-center justify-center border border-green-500"><div className="w-6 h-6 bg-green-600 rounded-sm"></div></div></div>
+           <div>
+             <p className="font-bold text-green-400 mb-1">Tactics</p>
+             <p className="text-xs leading-relaxed">Hide in green bushes to ambush. Walls block enemy bullets.</p>
+           </div>
+        </div>
+      </div>
+
+      <button onClick={onClose} className="mt-6 w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black uppercase tracking-wider py-3 rounded-xl shadow-lg transition-transform active:scale-95">
+        Got it!
+      </button>
+    </div>
+  </div>
+);
 
 export default function App() {
   const [screen, setScreen] = useState<'menu' | 'loading' | 'game' | 'result' | 'shop'>('menu');
@@ -31,6 +82,7 @@ export default function App() {
   const [selectedChar, setSelectedChar] = useState<CharacterClass>('speedy');
   const [selectedMode, setSelectedMode] = useState<GameModeType>('gem_grab');
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Load Progress
   useEffect(() => {
@@ -167,6 +219,10 @@ export default function App() {
     let Icon = Zap;
     if (type === 'tank') Icon = Shield;
     if (type === 'sniper') Icon = Crosshair;
+    if (type === 'ninja') Icon = Ghost;
+    if (type === 'minigun') Icon = Flame;
+    if (type === 'hunter') Icon = Target;
+    if (type === 'tech') Icon = Cpu;
 
     return (
         <button 
@@ -205,6 +261,7 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen bg-slate-900 text-white font-sans overflow-hidden select-none touch-none">
+      {showTutorial && <HelpModal onClose={() => setShowTutorial(false)} />}
       
       {/* MENU SCREEN */}
       {screen === 'menu' && (
@@ -233,9 +290,12 @@ export default function App() {
                         </div>
                     </div>
                  </div>
-                 <div className="bg-slate-900 px-4 py-2 rounded-full border border-yellow-600/50 flex items-center gap-2 shadow-inner">
-                     <Coins className="text-yellow-400 fill-yellow-400" size={20} />
-                     <span className="font-black text-xl text-yellow-100">{coins}</span>
+                 <div className="flex gap-2">
+                     <button onClick={() => setShowTutorial(true)} className="bg-slate-700 hover:bg-slate-600 w-10 h-10 rounded-full flex items-center justify-center border border-slate-500 text-slate-300 shadow-lg"><HelpCircle size={20} /></button>
+                     <div className="bg-slate-900 px-4 py-2 rounded-full border border-yellow-600/50 flex items-center gap-2 shadow-inner">
+                         <Coins className="text-yellow-400 fill-yellow-400" size={20} />
+                         <span className="font-black text-xl text-yellow-100">{coins}</span>
+                     </div>
                  </div>
              </div>
 
@@ -243,12 +303,16 @@ export default function App() {
                  {/* Character Select */}
                  <div>
                      <h3 className="text-slate-400 font-bold text-xs uppercase mb-3 tracking-widest flex items-center gap-2">
-                         Brawlers <span className="bg-slate-700 text-white px-2 rounded-full text-[10px]">{unlockedChars.length}/3</span>
+                         Brawlers <span className="bg-slate-700 text-white px-2 rounded-full text-[10px]">{unlockedChars.length}/7</span>
                      </h3>
                      <div className="space-y-3">
                          <CharacterCard type="speedy" />
                          <CharacterCard type="tank" />
                          <CharacterCard type="sniper" />
+                         <CharacterCard type="ninja"/>
+                         <CharacterCard type="minigun"/>
+                         <CharacterCard type="hunter"/>
+                         <CharacterCard type="tech"/>
                      </div>
                  </div>
 

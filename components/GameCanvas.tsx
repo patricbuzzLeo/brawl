@@ -1,5 +1,3 @@
-
-
 import React, { useRef, useEffect, useState } from 'react';
 import { GameMap, TileType, Entity, Bullet, Gem, Point, CharacterClass, GameModeType, CHARACTERS, Difficulty } from '../types';
 import { Home } from 'lucide-react';
@@ -25,7 +23,7 @@ const BULLET_SPEED = 10;
 const FIRE_COOLDOWN = 15; 
 const GEM_SPAWN_RATE = 120; // frames (2 seconds)
 const GEM_WIN_COUNT = 10;
-const HEIST_SAFE_HP = 6000;
+const HEIST_SAFE_HP = 3000; // Reduced from 6000 for faster matches
 const RESPAWN_TIME = 180; // 3 seconds at 60fps
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({ 
@@ -55,6 +53,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Spawn Locations (cached for respawn)
   const spawnPointsRef = useRef<{player: Point[], enemy: Point[]}>({ player: [], enemy: [] });
+  
+  // Gem Grab Specific
+  const gemSpawnTimerRef = useRef<number>(GEM_SPAWN_RATE);
+  const spawnerPosRef = useRef<Point | null>(null);
 
   // React State for HUD
   const [playerHp, setPlayerHp] = useState(100);
@@ -79,6 +81,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     botsRef.current = [];
     safeboxesRef.current = [];
     frameCountRef.current = 0;
+    gemSpawnTimerRef.current = GEM_SPAWN_RATE;
+    spawnerPosRef.current = null;
     
     // Find Spawns
     const pSpawns: Point[] = [];
@@ -91,6 +95,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         if (tile === TileType.SPAWN_ENEMY) eSpawns.push({ x, y });
         if (tile === TileType.SAFE_PLAYER) safeSpawns.push({ x, y, team: 'player' });
         if (tile === TileType.SAFE_ENEMY) safeSpawns.push({ x, y, team: 'enemy' });
+        if (tile === TileType.GEM_SPAWNER) spawnerPosRef.current = { x, y };
       });
     });
 
@@ -367,23 +372,38 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     });
 
     // --- Gem Spawner ---
-    if (gameMode === 'gem_grab' && frameCountRef.current % GEM_SPAWN_RATE === 0) {
-       let spawner: Point | null = null;
-       map.tiles.forEach((row, y) => {
-           row.forEach((t, x) => {
-               if (t === TileType.GEM_SPAWNER) spawner = {x, y};
-           });
-       });
-
-       if (spawner && gemsRef.current.length < 20) {
-           gemsRef.current.push({
-               id: `gem_${Date.now()}`,
-               x: spawner.x * TILE_SIZE + TILE_SIZE/2,
-               y: spawner.y * TILE_SIZE + TILE_SIZE/2,
-               collected: false
-           });
-       }
+    if (gameMode === 'gem_grab') {
+        gemSpawnTimerRef.current--;
+        
+        if (gemSpawnTimerRef.current <= 0) {
+            if (spawnerPosRef.current && gemsRef.current.length < 29) {
+                // Scatter Physics on Spawn
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1.5 + Math.random(); // Initial pop speed
+                
+                gemsRef.current.push({
+                    id: `gem_${Date.now()}`,
+                    x: spawnerPosRef.current.x * TILE_SIZE + TILE_SIZE/2,
+                    y: spawnerPosRef.current.y * TILE_SIZE + TILE_SIZE/2,
+                    collected: false,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed
+                });
+            }
+            gemSpawnTimerRef.current = GEM_SPAWN_RATE;
+        }
     }
+    
+    // --- Gem Physics ---
+    gemsRef.current.forEach(g => {
+        if (!g.collected) {
+            if (g.vx) g.x += g.vx;
+            if (g.vy) g.y += g.vy;
+            // Friction
+            if (g.vx) g.vx *= 0.92;
+            if (g.vy) g.vy *= 0.92;
+        }
+    });
 
     // --- Player Control ---
     if (!player.isDead) {
@@ -555,7 +575,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                                 id: `drop_${Date.now()}_${i}`,
                                 x: ent.x + (Math.random()*40 - 20),
                                 y: ent.y + (Math.random()*40 - 20),
-                                collected: false
+                                collected: false,
+                                vx: (Math.random()-0.5)*4,
+                                vy: (Math.random()-0.5)*4
                             });
                         }
                         ent.gems = 0;
@@ -700,6 +722,29 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                 ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
             }
         }
+    }
+
+    // --- Gem Spawner Timer Ring (Gem Grab Mode) ---
+    if (gameMode === 'gem_grab' && spawnerPosRef.current) {
+        const sx = spawnerPosRef.current.x * TILE_SIZE + TILE_SIZE/2;
+        const sy = spawnerPosRef.current.y * TILE_SIZE + TILE_SIZE/2;
+        
+        const progress = 1 - (gemSpawnTimerRef.current / GEM_SPAWN_RATE);
+        
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        
+        // Background ring
+        ctx.strokeStyle = 'rgba(168, 85, 247, 0.2)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 22, 0, Math.PI*2);
+        ctx.stroke();
+
+        // Progress ring
+        ctx.strokeStyle = '#a855f7';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 22, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * progress));
+        ctx.stroke();
     }
 
     // Entities

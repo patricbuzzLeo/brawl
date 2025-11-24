@@ -16,7 +16,7 @@ export interface Point {
   y: number;
 }
 
-export type CharacterClass = 'speedy' | 'tank' | 'sniper';
+export type CharacterClass = 'speedy' | 'tank' | 'sniper' | 'ninja' | 'minigun' | 'hunter' | 'tech';
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
 export interface CharacterStats {
@@ -130,5 +130,53 @@ export const CHARACTERS: Record<CharacterClass, CharacterStats> = {
     bulletSpread: 0,
     color: '#8b5cf6', // Purple
     price: 1000
+  },
+  ninja: {
+    name: 'Ninja',
+    hp: 750,
+    speed: 5.0,
+    damage: 150,
+    range: 12,
+    reload: 12,
+    bulletCount: 2,
+    bulletSpread: 0.15,
+    color: '#475569', // Slate 600
+    price: 2000
+  },
+  minigun: {
+    name: 'Minigun',
+    hp: 1400,
+    speed: 2.2,
+    damage: 40,
+    range: 14,
+    reload: 4,
+    bulletCount: 1,
+    bulletSpread: 0.15,
+    color: '#ea580c', // Orange 600
+    price: 3000
+  },
+  hunter: {
+    name: 'Hunter',
+    hp: 950,
+    speed: 3.8,
+    damage: 90,
+    range: 13,
+    reload: 40,
+    bulletCount: 6,
+    bulletSpread: 0.5,
+    color: '#ca8a04', // Yellow 600
+    price: 2500
+  },
+  tech: {
+    name: 'Tech',
+    hp: 900,
+    speed: 3.6,
+    damage: 240,
+    range: 22,
+    reload: 18,
+    bulletCount: 1,
+    bulletSpread: 0,
+    color: '#0891b2', // Cyan 600
+    price: 3500
   }
 };
