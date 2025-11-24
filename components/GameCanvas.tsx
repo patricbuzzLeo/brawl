@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect, useState } from 'react';
 import { GameMap, TileType, Entity, Bullet, Gem, Point, CharacterClass, GameModeType, CHARACTERS, Difficulty } from '../types';
 import { Home } from 'lucide-react';
@@ -418,11 +419,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         if (jAim.active) {
             lastInputTypeRef.current = 'joystick';
             player.angle = Math.atan2(jAim.y, jAim.x);
-        } else if (lastInputTypeRef.current === 'joystick') {
-            if (inputState.current.shootRequest) {
-            } else if (dx !== 0 || dy !== 0) {
-                 player.angle = Math.atan2(dy, dx);
-            }
+        } else if (inputState.current.shootRequest) {
+            // Keep aim angle from previous frame if we are shooting.
+            // Do not let movement logic below override the angle.
+        } else if (lastInputTypeRef.current === 'joystick' && (dx !== 0 || dy !== 0)) {
+             player.angle = Math.atan2(dy, dx);
         } else if (mouseRef.current) {
             player.angle = Math.atan2(mouseRef.current.y - player.y, mouseRef.current.x - player.x);
         }
