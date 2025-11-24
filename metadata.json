@@ -1,0 +1,5 @@
+{
+  "name": "Brawl Arena",
+  "description": "A fast-paced, top-down multiplayer-style shooter with procedurally generated arenas. Collect gems, defeat bots, and survive!",
+  "requestFramePermissions": []
+}
