@@ -1,9 +1,10 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GameCanvas } from './components/GameCanvas';
 import { Joystick } from './components/Joystick';
 import { generateGameMap } from './services/geminiService';
 import { GameMap, CharacterClass, GameModeType, CHARACTERS, Difficulty } from './types';
-import { Loader2, Trophy, Skull, Dices, Swords, Gem, Shield, Crosshair, Zap, Coins, Lock, ShoppingBag, Package, Star, Gauge, HelpCircle, X, Ghost, Flame, Target, Cpu } from 'lucide-react';
+import { Loader2, Trophy, Skull, Dices, Swords, Gem, Shield, Crosshair, Zap, Coins, Lock, ShoppingBag, Package, Star, Gauge, HelpCircle, X, Ghost, Flame, Target, Cpu, Eye, Hammer } from 'lucide-react';
 
 // Box Configuration
 const BOXES = [
@@ -70,19 +71,25 @@ export default function App() {
   const [result, setResult] = useState<'win' | 'lose' | null>(null);
   
   // Economy State
-  const [coins, setCoins] = useState<number>(0);
+  const [coins, setCoins] = useState<number>(300);
   const [unlockedChars, setUnlockedChars] = useState<CharacterClass[]>(['speedy']);
   
   // Level State (Account)
   const [level, setLevel] = useState<number>(1);
   const [xp, setXp] = useState<number>(0);
   const [xpGained, setXpGained] = useState<number>(0);
+  const [coinsGained, setCoinsGained] = useState<number>(0);
   
   // Selection State
   const [selectedChar, setSelectedChar] = useState<CharacterClass>('speedy');
   const [selectedMode, setSelectedMode] = useState<GameModeType>('gem_grab');
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [showTutorial, setShowTutorial] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  
+  // Streak State
+  const [winStreak, setWinStreak] = useState<number>(0);
+  const [lastStreakBonus, setLastStreakBonus] = useState<number>(0);
 
   // Load Progress
   useEffect(() => {
@@ -90,6 +97,7 @@ export default function App() {
     const savedChars = localStorage.getItem('brawl_chars');
     const savedLevel = localStorage.getItem('brawl_level');
     const savedXp = localStorage.getItem('brawl_xp');
+    const savedStreak = localStorage.getItem('brawl_streak');
 
     if (savedCoins) setCoins(parseInt(savedCoins));
     if (savedChars) {
@@ -108,6 +116,7 @@ export default function App() {
     }
     if (savedLevel) setLevel(parseInt(savedLevel));
     if (savedXp) setXp(parseInt(savedXp));
+    if (savedStreak) setWinStreak(parseInt(savedStreak));
   }, []);
 
   // Save Progress
@@ -116,7 +125,8 @@ export default function App() {
     localStorage.setItem('brawl_chars', JSON.stringify(unlockedChars));
     localStorage.setItem('brawl_level', level.toString());
     localStorage.setItem('brawl_xp', xp.toString());
-  }, [coins, unlockedChars, level, xp]);
+    localStorage.setItem('brawl_streak', winStreak.toString());
+  }, [coins, unlockedChars, level, xp, winStreak]);
 
   // Input State passed to Game Loop
   const inputRef = useRef({
@@ -126,6 +136,21 @@ export default function App() {
   });
 
   const getXpForNextLevel = (lvl: number) => lvl * 100;
+
+  const handleRedeemCode = () => {
+    if (promoCode === '6321') {
+        if (!unlockedChars.includes('sniper')) {
+            setUnlockedChars(prev => [...prev, 'sniper']);
+            alert('Code Redeemed! Sniper Unlocked!');
+            setSelectedChar('sniper');
+        } else {
+            alert('You already have Sniper!');
+        }
+        setPromoCode('');
+    } else {
+        alert('Invalid Code');
+    }
+  };
 
   const handleStartGame = async () => {
     if (!unlockedChars.includes(selectedChar)) return; 
@@ -144,23 +169,34 @@ export default function App() {
     setResult(res);
     let rewardCoins = 0;
     let rewardXp = 0;
+    let currentStreak = winStreak;
+    let bonus = 0;
 
     if (res === 'win') {
-        rewardCoins = 60;
+        rewardCoins = 20; // Reduced from 60
         rewardXp = 50;
         if (difficulty === 'hard') {
-            rewardCoins += 40;
+            rewardCoins += 15;
             rewardXp += 30;
         } else if (difficulty === 'easy') {
-            rewardCoins = 30;
+            rewardCoins = 10;
             rewardXp = 30;
         }
+
+        // Streak Logic
+        const newStreak = currentStreak + 1;
+        bonus = Math.min(newStreak * 5, 50); // Reduced cap
+        rewardCoins += bonus;
+        setWinStreak(newStreak);
     } else {
-        rewardCoins = 10;
+        rewardCoins = 5; // Reduced from 10
         rewardXp = 10 + Math.floor(gems * 2);
+        setWinStreak(0);
     }
     
+    setLastStreakBonus(bonus);
     setCoins(prev => prev + rewardCoins);
+    setCoinsGained(rewardCoins);
     
     // XP Logic (Account)
     const maxXp = getXpForNextLevel(level);
@@ -223,6 +259,8 @@ export default function App() {
     if (type === 'minigun') Icon = Flame;
     if (type === 'hunter') Icon = Target;
     if (type === 'tech') Icon = Cpu;
+    if (type === 'spy') Icon = Eye;
+    if (type === 'golem') Icon = Hammer;
 
     return (
         <button 
@@ -253,6 +291,8 @@ export default function App() {
                     {type === 'speedy' && "Fast • High DPS"}
                     {type === 'tank' && "High HP • Shotgun"}
                     {type === 'sniper' && "Long Range • High Dmg"}
+                    {type === 'golem' && "Tanky • Close Range"}
+                    {type === 'spy' && "Fast • Stealthy"}
                 </div>
             </div>
         </button>
@@ -303,7 +343,7 @@ export default function App() {
                  {/* Character Select */}
                  <div>
                      <h3 className="text-slate-400 font-bold text-xs uppercase mb-3 tracking-widest flex items-center gap-2">
-                         Brawlers <span className="bg-slate-700 text-white px-2 rounded-full text-[10px]">{unlockedChars.length}/7</span>
+                         Brawlers <span className="bg-slate-700 text-white px-2 rounded-full text-[10px]">{unlockedChars.length}/9</span>
                      </h3>
                      <div className="space-y-3">
                          <CharacterCard type="speedy" />
@@ -313,6 +353,8 @@ export default function App() {
                          <CharacterCard type="minigun"/>
                          <CharacterCard type="hunter"/>
                          <CharacterCard type="tech"/>
+                         <CharacterCard type="spy"/>
+                         <CharacterCard type="golem"/>
                      </div>
                  </div>
 
@@ -399,6 +441,23 @@ export default function App() {
                     Battle!
                 </button>
              </div>
+
+             <div className="mt-4 pt-4 border-t border-slate-700 flex justify-center items-center gap-2">
+                <input 
+                    type="text" 
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    placeholder="Secret Code"
+                    className="bg-slate-900 text-slate-200 text-sm px-3 py-2 rounded-lg border border-slate-600 outline-none focus:border-yellow-500 w-32"
+                />
+                <button 
+                    onClick={handleRedeemCode}
+                    className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold px-3 py-2 rounded-lg border border-slate-600"
+                >
+                    Redeem
+                </button>
+             </div>
+
           </div>
         </div>
       )}
@@ -465,7 +524,7 @@ export default function App() {
                              </div>
                          )
                      })}
-                     {unlockedChars.length === 3 && (
+                     {unlockedChars.length === Object.keys(CHARACTERS).length && (
                          <div className="text-center text-slate-500 py-8 italic">All brawlers unlocked!</div>
                      )}
                 </div>
@@ -507,46 +566,41 @@ export default function App() {
                     <>
                         <Trophy size={80} className="text-yellow-400 mx-auto mb-4 animate-bounce" />
                         <h2 className="text-6xl font-black text-white mb-2 uppercase tracking-tighter drop-shadow-lg">Victory!</h2>
-                        <div className="flex justify-center gap-4 mb-8">
-                             <div className="bg-slate-900/50 rounded-xl p-3 flex flex-col items-center border border-yellow-500/30 min-w-[100px]">
-                                <span className="text-yellow-200 text-xs font-bold uppercase mb-1">Coins</span>
-                                <div className="flex items-center gap-1">
-                                    <Coins className="text-yellow-400 fill-yellow-400" size={20}/>
-                                    <span className="text-2xl font-black text-white">+{coins - (parseInt(localStorage.getItem('brawl_coins') || '0') - (coins - xpGained /* rough estimate logic fixed below */) )}</span>
-                                    {/* Note: The calc above is tricky due to closure state, using xpGained instead for visuals */}
+                        {winStreak > 1 && (
+                            <div className="flex justify-center mb-4">
+                                <div className="flex items-center gap-2 bg-orange-500/20 px-4 py-2 rounded-full border border-orange-500/50 animate-pulse">
+                                    <Flame className="text-orange-500 fill-orange-500" size={20} />
+                                    <span className="font-black text-orange-400 uppercase text-sm">Win Streak: {winStreak}</span>
                                 </div>
-                             </div>
-                             <div className="bg-slate-900/50 rounded-xl p-3 flex flex-col items-center border border-blue-500/30 min-w-[100px]">
-                                <span className="text-blue-200 text-xs font-bold uppercase mb-1">XP</span>
-                                <div className="flex items-center gap-1">
-                                    <Star className="text-blue-400 fill-blue-400" size={20}/>
-                                    <span className="text-2xl font-black text-white">+{xpGained}</span>
-                                </div>
-                             </div>
-                        </div>
+                            </div>
+                        )}
                     </>
                 ) : (
                     <>
                         <Skull size={80} className="text-red-500 mx-auto mb-4 animate-pulse" />
                         <h2 className="text-6xl font-black text-white mb-2 uppercase tracking-tighter drop-shadow-lg">Defeat</h2>
-                        <div className="flex justify-center gap-4 mb-8">
-                             <div className="bg-slate-900/50 rounded-xl p-3 flex flex-col items-center border border-yellow-500/30 min-w-[100px]">
-                                <span className="text-yellow-200 text-xs font-bold uppercase mb-1">Coins</span>
-                                <div className="flex items-center gap-1">
-                                    <Coins className="text-yellow-400 fill-yellow-400" size={20}/>
-                                    <span className="text-2xl font-black text-white">+10</span>
-                                </div>
-                             </div>
-                             <div className="bg-slate-900/50 rounded-xl p-3 flex flex-col items-center border border-blue-500/30 min-w-[100px]">
-                                <span className="text-blue-200 text-xs font-bold uppercase mb-1">XP</span>
-                                <div className="flex items-center gap-1">
-                                    <Star className="text-blue-400 fill-blue-400" size={20}/>
-                                    <span className="text-2xl font-black text-white">+{xpGained}</span>
-                                </div>
-                             </div>
-                        </div>
                     </>
                 )}
+                
+                <div className="flex justify-center gap-4 mb-8">
+                     <div className="bg-slate-900/50 rounded-xl p-3 flex flex-col items-center border border-yellow-500/30 min-w-[100px]">
+                        <span className="text-yellow-200 text-xs font-bold uppercase mb-1">Coins</span>
+                        <div className="flex items-center gap-1">
+                            <Coins className="text-yellow-400 fill-yellow-400" size={20}/>
+                            <span className="text-2xl font-black text-white">+{coinsGained}</span>
+                        </div>
+                        {lastStreakBonus > 0 && (
+                            <span className="text-[10px] text-yellow-500 font-bold mt-1">+ {lastStreakBonus} Streak Bonus</span>
+                        )}
+                     </div>
+                     <div className="bg-slate-900/50 rounded-xl p-3 flex flex-col items-center border border-blue-500/30 min-w-[100px]">
+                        <span className="text-blue-200 text-xs font-bold uppercase mb-1">XP</span>
+                        <div className="flex items-center gap-1">
+                            <Star className="text-blue-400 fill-blue-400" size={20}/>
+                            <span className="text-2xl font-black text-white">+{xpGained}</span>
+                        </div>
+                     </div>
+                </div>
                 
                 {/* Level Progress in Result */}
                 <div className="mb-8 w-full">

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,7 +29,7 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useRef, useEffect } from 'react';
         import { createRoot } from 'react-dom/client';
-        import { Home, Loader2, Trophy, Skull, Dices, Swords, Gem, Shield, Crosshair, Zap, Coins, Lock, ShoppingBag, Package, Star, Gauge, Ghost, Flame, Target, Cpu, HelpCircle, X } from 'lucide-react';
+        import { Home, Loader2, Trophy, Skull, Dices, Swords, Gem, Shield, Crosshair, Zap, Coins, Lock, ShoppingBag, Package, Star, Gauge, Ghost, Flame, Target, Cpu, HelpCircle, X, Eye, Hammer } from 'lucide-react';
 
         // --- TYPES & CONSTANTS ---
         const TileType = {
@@ -46,18 +47,30 @@
             name: 'Sniper', hp: 600, speed: 3.5, damage: 600, range: 30, reload: 50, bulletCount: 1, bulletSpread: 0, color: '#8b5cf6', price: 1000
           },
           ninja: {
-            name: 'Ninja', hp: 650, speed: 5.0, damage: 150, range: 12, reload: 25, bulletCount: 3, bulletSpread: 0.2, color: '#111827', price: 2000
+            name: 'Ninja', hp: 750, speed: 5.0, damage: 150, range: 12, reload: 12, bulletCount: 2, bulletSpread: 0.15, color: '#475569', price: 2000
           },
           minigun: {
-            name: 'Minigun', hp: 1200, speed: 2.5, damage: 45, range: 18, reload: 4, bulletCount: 1, bulletSpread: 0.1, color: '#f97316', price: 3000
+            name: 'Minigun', hp: 1400, speed: 2.2, damage: 40, range: 14, reload: 4, bulletCount: 1, bulletSpread: 0.15, color: '#ea580c', price: 3000
           },
           hunter: {
-            name: 'Hunter', hp: 1100, speed: 3.2, damage: 100, range: 9, reload: 40, bulletCount: 5, bulletSpread: 0.25, color: '#84cc16', price: 4500
+            name: 'Hunter', hp: 950, speed: 3.8, damage: 90, range: 13, reload: 40, bulletCount: 6, bulletSpread: 0.5, color: '#ca8a04', price: 2500
           },
           tech: {
-            name: 'Tech', hp: 750, speed: 4.0, damage: 220, range: 14, reload: 18, bulletCount: 2, bulletSpread: 0.15, color: '#ec4899', price: 6000
+            name: 'Tech', hp: 900, speed: 3.6, damage: 240, range: 22, reload: 18, bulletCount: 1, bulletSpread: 0, color: '#0891b2', price: 3500
+          },
+          spy: {
+            name: 'Spy', hp: 550, speed: 5.5, damage: 180, range: 12, reload: 15, bulletCount: 1, bulletSpread: 0, color: '#db2777', price: 4000
+          },
+          golem: {
+            name: 'Golem', hp: 2500, speed: 1.8, damage: 350, range: 9, reload: 55, bulletCount: 1, bulletSpread: 0, color: '#4b5563', price: 5000
           }
         };
+
+        const BOXES = [
+          { id: 'brawl', name: 'Brawl Box', price: 100, minCoins: 50, maxCoins: 200, color: 'bg-blue-600' },
+          { id: 'big', name: 'Big Box', price: 300, minCoins: 200, maxCoins: 600, color: 'bg-purple-600' },
+          { id: 'mega', name: 'Mega Box', price: 800, minCoins: 600, maxCoins: 2000, color: 'bg-yellow-500' },
+        ];
 
         const MAP_SIZE = 24;
 
@@ -224,7 +237,7 @@
         const BULLET_SPEED = 10;
         const GEM_SPAWN_RATE = 120; // Frames for gem spawn
         const GEM_WIN_COUNT = 10;
-        const HEIST_SAFE_HP = 3000; // Reduced from 6000 for faster matches
+        const HEIST_SAFE_HP = 3000; 
         const RESPAWN_TIME = 180;
 
         const GameCanvas = ({ map, onGameOver, onExit, characterClass, gameMode, inputState, difficulty }) => {
@@ -288,15 +301,28 @@
             const mainSpawn = pSpawns[0];
 
             playerRef.current = {
-              id: 'player', x: mainSpawn.x * TILE_SIZE + TILE_SIZE / 2, y: mainSpawn.y * TILE_SIZE + TILE_SIZE / 2,
-              radius: 18, color: pStats.color, hp: pStats.hp, maxHp: pStats.hp, speed: pStats.speed,
-              gems: 0, team: 'player', isDead: false, angle: -Math.PI/2, cooldown: 0, stats: { ...pStats },
-              respawnTimer: 0, level: 1, xp: 0, maxXp: 100
+              id: 'player',
+              x: mainSpawn.x * TILE_SIZE + TILE_SIZE / 2,
+              y: mainSpawn.y * TILE_SIZE + TILE_SIZE / 2,
+              radius: 18,
+              color: pStats.color,
+              hp: pStats.hp,
+              maxHp: pStats.hp,
+              speed: pStats.speed,
+              gems: 0,
+              team: 'player',
+              isDead: false,
+              angle: -Math.PI/2,
+              cooldown: 0,
+              stats: { ...pStats },
+              respawnTimer: 0,
+              level: 1, xp: 0, maxXp: 100
             };
             setPlayerMaxHp(pStats.hp);
             setPlayerHp(pStats.hp);
 
-            const availableClasses = ['speedy', 'tank', 'sniper', 'ninja', 'minigun', 'hunter', 'tech'];
+            const availableClasses = ['speedy', 'tank', 'sniper', 'ninja', 'minigun', 'hunter', 'tech', 'spy', 'golem'];
+            
             const createBot = (team, idx, spawnList) => {
                const spawn = spawnList[idx % spawnList.length];
                const type = availableClasses[Math.floor(Math.random() * availableClasses.length)];
@@ -304,8 +330,8 @@
                const stats = { ...baseStats };
 
                if (team === 'enemy') {
-                   let hpMult = 0.6, dmgMult = 0.5, speedMult = 0.9, reloadMult = 1.3;
-                   if (difficulty === 'easy') { hpMult = 0.4; dmgMult = 0.3; speedMult = 0.8; reloadMult = 1.6; }
+                   let hpMult = 0.6; let dmgMult = 0.5; let speedMult = 0.9; let reloadMult = 1.3;
+                   if (difficulty === 'easy') { hpMult = 0.4; dmgMult = 0.3; speedMult = 0.8; reloadMult = 1.6; } 
                    else if (difficulty === 'hard') { hpMult = 0.9; dmgMult = 0.8; speedMult = 1.0; reloadMult = 1.0; }
                    stats.hp = Math.round(stats.hp * hpMult);
                    stats.damage = Math.round(stats.damage * dmgMult);
@@ -316,12 +342,20 @@
                    stats.damage = Math.round(stats.damage * 0.7);
                }
 
+               const offsetX = (Math.random() - 0.5) * TILE_SIZE;
+               const offsetY = (Math.random() - 0.5) * TILE_SIZE;
                return {
-                    id: `bot_${team}_${idx}`, x: spawn.x * TILE_SIZE + TILE_SIZE / 2, y: spawn.y * TILE_SIZE + TILE_SIZE / 2,
-                    radius: 18, color: stats.color, hp: stats.hp, maxHp: stats.hp, speed: stats.speed * 0.85, 
-                    gems: 0, team: team, isDead: false, angle: team === 'player' ? -Math.PI/2 : Math.PI/2,
-                    cooldown: 0, stats: stats, respawnTimer: 0, level: 1, xp: 0, maxXp: 100,
-                    stuckTime: 0, unstuckAngle: null, lastX: 0, lastY: 0
+                    id: `bot_${team}_${idx}`,
+                    x: spawn.x * TILE_SIZE + TILE_SIZE / 2 + offsetX,
+                    y: spawn.y * TILE_SIZE + TILE_SIZE / 2 + offsetY,
+                    radius: 18,
+                    color: stats.color,
+                    hp: stats.hp, maxHp: stats.hp,
+                    speed: stats.speed * 0.85, gems: 0,
+                    team: team, isDead: false,
+                    angle: team === 'player' ? -Math.PI/2 : Math.PI/2,
+                    cooldown: 0, stats: stats,
+                    respawnTimer: 0, level: 1, xp: 0, maxXp: 100
                };
             };
 
@@ -336,23 +370,34 @@
             }
 
             if (gameMode === 'heist') {
-                safeboxesRef.current = safeSpawns.map(s => ({
-                    id: `safe-${s.team}`, x: s.x * TILE_SIZE + TILE_SIZE / 2, y: s.y * TILE_SIZE + TILE_SIZE / 2,
-                    radius: 24, color: s.team === 'player' ? '#3b82f6' : '#ef4444', hp: HEIST_SAFE_HP, maxHp: HEIST_SAFE_HP,
-                    speed: 0, gems: 0, team: s.team, isDead: false, angle: 0, cooldown: 0, stats: CHARACTERS.tank, isSafe: true,
+                safeboxesRef.current = safeSpawns.map((s, i) => ({
+                    id: `safe-${s.team}`,
+                    x: s.x * TILE_SIZE + TILE_SIZE / 2,
+                    y: s.y * TILE_SIZE + TILE_SIZE / 2,
+                    radius: 24,
+                    color: s.team === 'player' ? '#3b82f6' : '#ef4444',
+                    hp: HEIST_SAFE_HP, maxHp: HEIST_SAFE_HP,
+                    speed: 0, gems: 0, team: s.team,
+                    isDead: false, angle: 0, cooldown: 0,
+                    stats: CHARACTERS.tank, isSafe: true,
                     respawnTimer: 0, level: 1, xp: 0, maxXp: 100
                 }));
             }
-            setScoreP(0); setScoreE(0);
+
+            setScoreP(0);
+            setScoreE(0);
+
           }, [map, characterClass, gameMode, difficulty]);
 
+          // --- Input ---
           useEffect(() => {
             const handleKeyDown = (e) => { keysRef.current[e.code] = true; };
             const handleKeyUp = (e) => { keysRef.current[e.code] = false; };
             const handleMouseMove = (e) => {
               lastInputTypeRef.current = 'mouse';
-              if (!canvasRef.current) return;
-              const rect = canvasRef.current.getBoundingClientRect();
+              const canvas = canvasRef.current;
+              if (!canvas) return;
+              const rect = canvas.getBoundingClientRect();
               mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
             };
             const handleMouseDown = (e) => {
@@ -361,10 +406,12 @@
                    shoot(playerRef.current, mouseRef.current.x, mouseRef.current.y);
                }
             };
+
             window.addEventListener('keydown', handleKeyDown);
             window.addEventListener('keyup', handleKeyUp);
             window.addEventListener('mousemove', handleMouseMove);
             window.addEventListener('mousedown', handleMouseDown);
+
             return () => {
               window.removeEventListener('keydown', handleKeyDown);
               window.removeEventListener('keyup', handleKeyUp);
@@ -374,7 +421,10 @@
           }, []);
 
           const checkWallCollision = (x, y, r) => {
-            const points = [{ x: x - r, y: y }, { x: x + r, y: y }, { x: x, y: y - r }, { x: x, y: y + r }];
+            const points = [
+                { x: x - r, y: y }, { x: x + r, y: y },
+                { x: x, y: y - r }, { x: x, y: y + r }
+            ];
             for (const p of points) {
                 const tx = Math.floor(p.x / TILE_SIZE);
                 const ty = Math.floor(p.y / TILE_SIZE);
@@ -387,16 +437,25 @@
 
           const shoot = (shooter, targetX, targetY) => {
               if (shooter.cooldown > 0) return;
+              
               const angle = Math.atan2(targetY - shooter.y, targetX - shooter.x);
               const count = shooter.stats.bulletCount;
               const spread = shooter.stats.bulletSpread;
               const startAngle = angle - (spread * (count - 1)) / 2;
+
               for(let i=0; i<count; i++) {
                   const fireAngle = startAngle + i * spread;
                   bulletsRef.current.push({
-                      id: `${shooter.id}_b_${Date.now()}_${i}`, x: shooter.x + Math.cos(fireAngle) * (shooter.radius + 10),
-                      y: shooter.y + Math.sin(fireAngle) * (shooter.radius + 10), vx: Math.cos(fireAngle) * BULLET_SPEED, vy: Math.sin(fireAngle) * BULLET_SPEED,
-                      ownerId: shooter.id, team: shooter.team, damage: shooter.stats.damage, range: 0, maxRange: shooter.stats.range * BULLET_SPEED
+                      id: `${shooter.id}_b_${Date.now()}_${i}`,
+                      x: shooter.x + Math.cos(fireAngle) * (shooter.radius + 10),
+                      y: shooter.y + Math.sin(fireAngle) * (shooter.radius + 10),
+                      vx: Math.cos(fireAngle) * BULLET_SPEED,
+                      vy: Math.sin(fireAngle) * BULLET_SPEED,
+                      ownerId: shooter.id,
+                      team: shooter.team,
+                      damage: shooter.stats.damage,
+                      range: 0,
+                      maxRange: shooter.stats.range * BULLET_SPEED
                   });
               }
               shooter.cooldown = shooter.stats.reload;
@@ -415,6 +474,18 @@
               }
           };
 
+          const respawnEntity = (ent) => {
+              const spawns = ent.team === 'player' ? spawnPointsRef.current.player : spawnPointsRef.current.enemy;
+              if (spawns.length === 0) return;
+              const spawn = spawns[Math.floor(Math.random() * spawns.length)];
+              ent.x = spawn.x * TILE_SIZE + TILE_SIZE/2;
+              ent.y = spawn.y * TILE_SIZE + TILE_SIZE/2;
+              ent.hp = ent.maxHp;
+              ent.isDead = false;
+              ent.respawnTimer = 0;
+              ent.gems = 0; 
+          };
+
           const update = () => {
             if (gameStateRef.current !== 'playing') return;
             frameCountRef.current++;
@@ -425,84 +496,82 @@
                 if (ent.isDead) {
                     ent.respawnTimer--;
                     if (ent.respawnTimer <= 0) {
-                        if (gameMode !== 'duel' || (ent.team === 'player' && ent.id !== 'player')) { 
-                            const spawns = ent.team === 'player' ? spawnPointsRef.current.player : spawnPointsRef.current.enemy;
-                            if (spawns.length > 0) {
-                                const spawn = spawns[Math.floor(Math.random() * spawns.length)];
-                                ent.x = spawn.x * TILE_SIZE + TILE_SIZE/2;
-                                ent.y = spawn.y * TILE_SIZE + TILE_SIZE/2;
-                                ent.hp = ent.maxHp;
-                                ent.isDead = false;
-                                ent.gems = 0;
-                            }
-                        }
+                         if (gameMode === 'duel' && (ent.id === 'player' || ent.team === 'enemy')) { /* no respawn */ } 
+                         else { respawnEntity(ent); }
                     }
                 }
             });
 
             if (gameMode === 'gem_grab') {
-               gemSpawnTimerRef.current--;
-               if (gemSpawnTimerRef.current <= 0) {
-                   if (spawnerPosRef.current && gemsRef.current.length < 29) {
-                       const angle = Math.random() * Math.PI * 2;
-                       const speed = 1.5 + Math.random(); // Pop out speed
-                       gemsRef.current.push({ 
-                           id: `gem_${Date.now()}`, 
-                           x: spawnerPosRef.current.x * TILE_SIZE + TILE_SIZE/2, 
-                           y: spawnerPosRef.current.y * TILE_SIZE + TILE_SIZE/2, 
-                           vx: Math.cos(angle) * speed,
-                           vy: Math.sin(angle) * speed,
-                           collected: false 
-                       });
-                   }
-                   gemSpawnTimerRef.current = GEM_SPAWN_RATE;
-               }
+                gemSpawnTimerRef.current--;
+                if (gemSpawnTimerRef.current <= 0) {
+                    if (spawnerPosRef.current && gemsRef.current.length < 29) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = 1.5 + Math.random();
+                        gemsRef.current.push({
+                            id: `gem_${Date.now()}`,
+                            x: spawnerPosRef.current.x * TILE_SIZE + TILE_SIZE/2,
+                            y: spawnerPosRef.current.y * TILE_SIZE + TILE_SIZE/2,
+                            collected: false,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed
+                        });
+                    }
+                    gemSpawnTimerRef.current = GEM_SPAWN_RATE;
+                }
             }
             
-            // Gem Physics
             gemsRef.current.forEach(g => {
                 if (!g.collected) {
                     if (g.vx) g.x += g.vx;
                     if (g.vy) g.y += g.vy;
-                    if (g.vx) g.vx *= 0.92; // Friction
+                    if (g.vx) g.vx *= 0.92;
                     if (g.vy) g.vy *= 0.92;
                 }
             });
 
             if (!player.isDead) {
-                let dx = 0, dy = 0;
+                let dx = 0;
+                let dy = 0;
                 if (keysRef.current['KeyW'] || keysRef.current['ArrowUp']) dy -= 1;
                 if (keysRef.current['KeyS'] || keysRef.current['ArrowDown']) dy += 1;
                 if (keysRef.current['KeyA'] || keysRef.current['ArrowLeft']) dx -= 1;
                 if (keysRef.current['KeyD'] || keysRef.current['ArrowRight']) dx += 1;
 
                 const jMove = inputState.current.move;
-                if (jMove.x !== 0 || jMove.y !== 0) { dx = jMove.x; dy = jMove.y; lastInputTypeRef.current = 'joystick'; }
-                
+                if (jMove.x !== 0 || jMove.y !== 0) {
+                    dx = jMove.x;
+                    dy = jMove.y;
+                    lastInputTypeRef.current = 'joystick';
+                }
+
                 if (dx !== 0 || dy !== 0) {
-                    if (jMove.x === 0 && jMove.y === 0) { const len = Math.sqrt(dx*dx + dy*dy); dx /= len; dy /= len; }
-                    dx *= player.speed; dy *= player.speed;
+                    if (jMove.x === 0 && jMove.y === 0) {
+                        const len = Math.sqrt(dx*dx + dy*dy);
+                        dx /= len; dy /= len;
+                    }
+                    dx *= player.speed;
+                    dy *= player.speed;
                     if (!checkWallCollision(player.x + dx, player.y, player.radius)) player.x += dx;
                     if (!checkWallCollision(player.x, player.y + dy, player.radius)) player.y += dy;
                 }
 
                 const jAim = inputState.current.aim;
-                if (jAim.active) { 
-                    lastInputTypeRef.current = 'joystick'; 
-                    player.angle = Math.atan2(jAim.y, jAim.x); 
+                if (jAim.active) {
+                    lastInputTypeRef.current = 'joystick';
+                    player.angle = Math.atan2(jAim.y, jAim.x);
                 } else if (inputState.current.shootRequest) {
-                   // Keep aim angle from previous frame if we are shooting.
-                } else if (lastInputTypeRef.current === 'joystick' && (dx!==0 || dy!==0)) { 
-                    player.angle = Math.atan2(dy, dx); 
-                } else if (mouseRef.current) { 
-                    player.angle = Math.atan2(mouseRef.current.y - player.y, mouseRef.current.x - player.x); 
+                    // Keep aim
+                } else if (lastInputTypeRef.current === 'joystick' && (dx !== 0 || dy !== 0)) {
+                     player.angle = Math.atan2(dy, dx);
+                } else if (mouseRef.current) {
+                    player.angle = Math.atan2(mouseRef.current.y - player.y, mouseRef.current.x - player.x);
                 }
 
-                if (inputState.current.shootRequest) { 
-                    shoot(player, player.x + Math.cos(player.angle)*100, player.y + Math.sin(player.angle)*100); 
-                    inputState.current.shootRequest = false; 
+                if (inputState.current.shootRequest) {
+                    shoot(player, player.x + Math.cos(player.angle)*100, player.y + Math.sin(player.angle)*100);
+                    inputState.current.shootRequest = false;
                 }
-                
                 if (player.cooldown > 0) player.cooldown--;
             }
 
@@ -510,96 +579,108 @@
                 if (bot.isDead) return;
                 const enemies = [player, ...botsRef.current].filter(e => e.team !== bot.team && !e.isDead);
                 const safes = safeboxesRef.current.filter(s => s.team !== bot.team && !s.isDead);
-                let target = null, targetX = bot.x, targetY = bot.y;
+                let target = null;
+                let targetX = bot.x;
+                let targetY = bot.y;
 
-                if (gameMode === 'heist' && safes.length > 0) { target = safes[0]; targetX = target.x; targetY = target.y; }
-                else if (gameMode === 'gem_grab' && bot.gems >= 5) {
-                    const spawn = bot.team === 'player' ? spawnPointsRef.current.player[0] : spawnPointsRef.current.enemy[0];
-                    targetX = spawn.x * TILE_SIZE; targetY = spawn.y * TILE_SIZE;
+                if (gameMode === 'heist' && safes.length > 0) {
+                    target = safes[0];
+                    targetX = target.x;
+                    targetY = target.y;
                 } else if (gameMode === 'gem_grab') {
-                    let minD = Infinity;
-                    gemsRef.current.forEach(g => { if(!g.collected) { const d = Math.hypot(g.x-bot.x, g.y-bot.y); if(d < minD){minD=d; target=g;} } });
-                    if(target && minD < 400) { targetX = target.x; targetY = target.y; }
+                    if (bot.gems >= 5) {
+                        const spawn = bot.team === 'player' ? spawnPointsRef.current.player[0] : spawnPointsRef.current.enemy[0];
+                        targetX = spawn.x * TILE_SIZE;
+                        targetY = spawn.y * TILE_SIZE;
+                    } else {
+                        let minD = Infinity;
+                        let nearGem = null;
+                        gemsRef.current.forEach(g => {
+                            if (!g.collected) {
+                                const d = Math.hypot(g.x - bot.x, g.y - bot.y);
+                                if (d < minD) { minD = d; nearGem = g; }
+                            }
+                        });
+                        if (nearGem && minD < 400) {
+                            target = nearGem;
+                            targetX = nearGem.x;
+                            targetY = nearGem.y;
+                        }
+                    }
                 }
 
                 if (!target) {
                     let minD = Infinity;
-                    enemies.forEach(e => { const d = Math.hypot(e.x-bot.x, e.y-bot.y); if(d < minD){ minD=d; target=e; } });
-                    if(target) { targetX = target.x; targetY = target.y; }
+                    enemies.forEach(e => {
+                        const d = Math.hypot(e.x - bot.x, e.y - bot.y);
+                        if (d < minD) { minD = d; target = e; }
+                    });
+                    if (target) { targetX = target.x; targetY = target.y; }
                 }
 
-                if (target || targetX !== bot.x) {
+                if (target || (targetX !== bot.x)) {
                     const angle = Math.atan2(targetY - bot.y, targetX - bot.x);
                     const dist = Math.hypot(targetX - bot.x, targetY - bot.y);
                     let move = true;
                     if (target?.id && dist < 250 && bot.stats.name === 'Sniper') move = false;
-                    
-                    if (move && dist > 10) {
-                        const dMove = Math.hypot(bot.x - (bot.lastX || bot.x), bot.y - (bot.lastY || bot.y));
-                        bot.lastX = bot.x; bot.lastY = bot.y;
-                        
-                        if (dMove < 1.0) bot.stuckTime = (bot.stuckTime || 0) + 1;
-                        else bot.stuckTime = Math.max(0, (bot.stuckTime || 0) - 2);
 
-                        let moveAngle = angle;
-                        if (bot.stuckTime > 15) {
-                            if (!bot.unstuckAngle || bot.stuckTime % 30 === 0) bot.unstuckAngle = Math.random() * Math.PI * 2;
-                            moveAngle = bot.unstuckAngle;
-                        } else {
-                            bot.unstuckAngle = null;
-                        }
-
-                        const mx = Math.cos(moveAngle) * bot.speed; 
-                        const my = Math.sin(moveAngle) * bot.speed;
-                        
-                        let moved = false;
-                        if (!checkWallCollision(bot.x + mx, bot.y, bot.radius)) { bot.x += mx; moved = true; }
-                        if (!checkWallCollision(bot.x, bot.y + my, bot.radius)) { bot.y += my; moved = true; }
-                        
-                        if (!moved && bot.stuckTime < 15) {
-                             const rAngle = angle + (Math.random() > 0.5 ? 1.5 : -1.5);
-                             const rx = Math.cos(rAngle) * bot.speed;
-                             const ry = Math.sin(rAngle) * bot.speed;
-                             if (!checkWallCollision(bot.x + rx, bot.y, bot.radius)) bot.x += rx;
-                             else if (!checkWallCollision(bot.x, bot.y + ry, bot.radius)) bot.y += ry;
-                        }
+                    if (move && dist > 10) { 
+                        const mx = Math.cos(angle) * bot.speed;
+                        const my = Math.sin(angle) * bot.speed;
+                        if (!checkWallCollision(bot.x + mx, bot.y, bot.radius)) bot.x += mx;
+                        else if (!checkWallCollision(bot.x, bot.y + my, bot.radius)) bot.y += my;
                     }
-                    if (target?.hp !== undefined && dist < bot.stats.range * BULLET_SPEED) {
+                    if (target?.hp !== undefined) {
                          bot.angle = angle;
-                         if (bot.team === 'enemy') {
-                             const miss = difficulty === 'hard' ? 20 : (difficulty === 'easy' ? 100 : 60);
-                             shoot(bot, targetX + (Math.random()-0.5)*miss, targetY + (Math.random()-0.5)*miss);
-                         } else { shoot(bot, targetX, targetY); }
+                         if (dist < bot.stats.range * BULLET_SPEED) {
+                             if (bot.team === 'enemy') {
+                                 const miss = difficulty === 'hard' ? 20 : (difficulty === 'easy' ? 100 : 60);
+                                 shoot(bot, targetX + (Math.random()-0.5)*miss, targetY + (Math.random()-0.5)*miss);
+                             } else {
+                                 shoot(bot, targetX, targetY);
+                             }
+                         }
                     } else { bot.angle = angle; }
                 }
                 if (bot.cooldown > 0) bot.cooldown--;
             });
 
             bulletsRef.current = bulletsRef.current.filter(b => {
-                b.x += b.vx; b.y += b.vy; b.range += BULLET_SPEED;
+                b.x += b.vx;
+                b.y += b.vy;
+                b.range += BULLET_SPEED;
                 if (b.range >= b.maxRange) return false;
-                const tx = Math.floor(b.x / TILE_SIZE), ty = Math.floor(b.y / TILE_SIZE);
+                const tx = Math.floor(b.x / TILE_SIZE);
+                const ty = Math.floor(b.y / TILE_SIZE);
                 if (tx < 0 || tx >= map.width || ty < 0 || ty >= map.height) return false;
                 if (map.tiles[ty][tx] === TileType.WALL || map.tiles[ty][tx] === TileType.WATER) return false;
-                
+
                 const checkHit = (ent) => {
-                    if (ent.isDead || ent.team === b.team || ent.respawnTimer > 0) return false;
-                    if (Math.hypot(b.x - ent.x, b.y - ent.y) < ent.radius + 5) {
+                    if (ent.isDead || ent.team === b.team) return false;
+                    if (ent.respawnTimer > 0) return false; 
+                    const dist = Math.hypot(b.x - ent.x, b.y - ent.y);
+                    if (dist < ent.radius + 5) {
                         ent.hp -= b.damage;
                         if (ent.hp <= 0) {
-                            ent.hp = 0; ent.isDead = true; ent.respawnTimer = RESPAWN_TIME;
-                            const killer = [player, ...botsRef.current].find(e => e.id === b.ownerId);
+                            ent.hp = 0;
+                            ent.isDead = true;
+                            ent.respawnTimer = RESPAWN_TIME;
+                            const allEnts = [player, ...botsRef.current];
+                            const killer = allEnts.find(e => e.id === b.ownerId);
                             if (killer) gainXp(killer, 80);
+
                             if (!ent.isSafe) {
-                                const drop = Math.floor(ent.gems/2)+2;
-                                for(let i=0; i<drop; i++) gemsRef.current.push({
-                                    id:`d_${Date.now()}_${i}`, 
-                                    x:ent.x+(Math.random()*40-20), 
-                                    y:ent.y+(Math.random()*40-20), 
-                                    collected:false,
-                                    vx: (Math.random()-0.5)*4,
-                                    vy: (Math.random()-0.5)*4
-                                });
+                                const gemsToDrop = Math.floor(ent.gems / 2) + 2; 
+                                for(let i=0; i<gemsToDrop; i++) {
+                                    gemsRef.current.push({
+                                        id: `drop_${Date.now()}_${i}`,
+                                        x: ent.x + (Math.random()*40 - 20),
+                                        y: ent.y + (Math.random()*40 - 20),
+                                        collected: false,
+                                        vx: (Math.random()-0.5)*4,
+                                        vy: (Math.random()-0.5)*4
+                                    });
+                                }
                                 ent.gems = 0;
                             }
                         }
@@ -607,268 +688,388 @@
                     }
                     return false;
                 };
-                if(checkHit(player)) return false;
-                for(const bot of botsRef.current) if(checkHit(bot)) return false;
-                for(const safe of safeboxesRef.current) if(checkHit(safe)) return false;
-                return true;
+                if (checkHit(player)) return false; 
+                for (const bot of botsRef.current) { if (checkHit(bot)) return false; }
+                for (const safe of safeboxesRef.current) { if (checkHit(safe)) return false; }
+                return true; 
             });
 
             if (gameMode === 'gem_grab') {
-                const collect = (ent) => {
+                const collectGem = (ent) => {
                     if (ent.isDead) return;
                     gemsRef.current = gemsRef.current.filter(g => {
-                        if (Math.hypot(g.x - ent.x, g.y - ent.y) < ent.radius + 15) { ent.gems++; gainXp(ent, 15); return false; }
+                        const dist = Math.hypot(g.x - ent.x, g.y - ent.y);
+                        if (dist < ent.radius + 15) {
+                            ent.gems++;
+                            gainXp(ent, 15);
+                            return false; 
+                        }
                         return true;
                     });
                 };
-                collect(player);
-                botsRef.current.forEach(collect);
+                collectGem(player);
+                botsRef.current.forEach(e => collectGem(e));
             }
 
-            setPlayerHp(player.hp); setPlayerMaxHp(player.maxHp); setPlayerDead(player.isDead);
+            setPlayerHp(player.hp);
+            setPlayerMaxHp(player.maxHp);
+            setPlayerDead(player.isDead);
             setRespawnTime(Math.ceil(player.respawnTimer / 60));
             setAmmo(Math.max(0, 100 - (player.cooldown / player.stats.reload) * 100));
-            setInGameLevel(player.level); setInGameXp(player.xp); setInGameMaxXp(player.maxXp);
+            setInGameLevel(player.level);
+            setInGameXp(player.xp);
+            setInGameMaxXp(player.maxXp);
 
             if (gameMode === 'gem_grab') {
                 const pGems = player.gems + botsRef.current.filter(b => b.team === 'player').reduce((a,b)=>a+b.gems, 0);
                 const eGems = botsRef.current.filter(b => b.team === 'enemy').reduce((a,b)=>a+b.gems, 0);
-                setScoreP(pGems); setScoreE(eGems);
+                setScoreP(pGems);
+                setScoreE(eGems);
                 if (pGems >= GEM_WIN_COUNT) { gameStateRef.current = 'ended'; onGameOver('win', player.gems); }
                 else if (eGems >= GEM_WIN_COUNT) { gameStateRef.current = 'ended'; onGameOver('lose', player.gems); }
             } else if (gameMode === 'heist') {
                 const pSafe = safeboxesRef.current.find(s => s.team === 'player');
                 const eSafe = safeboxesRef.current.find(s => s.team === 'enemy');
-                setScoreP(pSafe ? Math.ceil((pSafe.hp/HEIST_SAFE_HP)*100):0);
-                setScoreE(eSafe ? Math.ceil((eSafe.hp/HEIST_SAFE_HP)*100):0);
-                if(eSafe?.isDead) { gameStateRef.current='ended'; onGameOver('win', 0); }
-                else if(pSafe?.isDead) { gameStateRef.current='ended'; onGameOver('lose', 0); }
+                setScoreP(pSafe ? Math.ceil((pSafe.hp / HEIST_SAFE_HP)*100) : 0);
+                setScoreE(eSafe ? Math.ceil((eSafe.hp / HEIST_SAFE_HP)*100) : 0);
+                if (eSafe?.isDead) { gameStateRef.current = 'ended'; onGameOver('win', 0); }
+                else if (pSafe?.isDead) { gameStateRef.current = 'ended'; onGameOver('lose', 0); }
             } else if (gameMode === 'duel') {
                 const enemy = botsRef.current.find(b => b.team === 'enemy');
-                setScoreP(player.isDead ? 0 : 1); setScoreE(enemy && !enemy.isDead ? 1 : 0);
-                if(enemy?.isDead) { gameStateRef.current='ended'; onGameOver('win', 0); }
-                else if(player.isDead) { gameStateRef.current='ended'; onGameOver('lose', 0); }
+                setScoreP(player.isDead ? 0 : 1);
+                setScoreE(enemy && !enemy.isDead ? 1 : 0);
+                if (enemy?.isDead) { gameStateRef.current = 'ended'; onGameOver('win', 0); }
+                else if (player.isDead) { gameStateRef.current = 'ended'; onGameOver('lose', 0); }
             }
           };
 
           const draw = () => {
-              const canvas = canvasRef.current;
-              if (!canvas) return;
-              const ctx = canvas.getContext('2d');
-              const player = playerRef.current;
-              if (!player) return;
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            const player = playerRef.current;
+            if (!player) return;
+            
+            ctx.fillStyle = '#1e293b'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const camX = canvas.width / 2 - player.x;
+            const camY = canvas.height / 2 - player.y;
 
-              ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-              const camX = canvas.width/2 - player.x;
-              const camY = canvas.height/2 - player.y;
+            ctx.save();
+            ctx.translate(camX, camY);
 
-              ctx.save();
-              ctx.translate(camX, camY);
+            for (let y = 0; y < map.height; y++) {
+                for (let x = 0; x < map.width; x++) {
+                    const tile = map.tiles[y][x];
+                    const px = x * TILE_SIZE;
+                    const py = y * TILE_SIZE;
+                    if (px + camX < -TILE_SIZE || px + camX > canvas.width || py + camY < -TILE_SIZE || py + camY > canvas.height) continue;
+                    if (tile === TileType.WALL) {
+                        ctx.fillStyle = '#334155';
+                        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = '#1e293b';
+                        ctx.fillRect(px, py + TILE_SIZE - 6, TILE_SIZE, 6);
+                    } else if (tile === TileType.BUSH) {
+                        ctx.fillStyle = '#22c55e';
+                        ctx.globalAlpha = 0.6;
+                        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                        ctx.globalAlpha = 1.0;
+                    } else if (tile === TileType.WATER) {
+                        ctx.fillStyle = '#0ea5e9';
+                        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    } else if (tile === TileType.GEM_SPAWNER) {
+                        ctx.fillStyle = '#1e1b4b';
+                        ctx.beginPath();
+                        ctx.arc(px + TILE_SIZE/2, py + TILE_SIZE/2, 12, 0, Math.PI*2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#a855f7';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    } else {
+                        ctx.fillStyle = '#475569';
+                        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
 
-              for (let y = 0; y < map.height; y++) {
-                  for (let x = 0; x < map.width; x++) {
-                      const tile = map.tiles[y][x];
-                      const px = x * TILE_SIZE, py = y * TILE_SIZE;
-                      if (px+camX < -TILE_SIZE || px+camX > canvas.width || py+camY < -TILE_SIZE || py+camY > canvas.height) continue;
-                      if (tile === TileType.WALL) { ctx.fillStyle = '#334155'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE); ctx.fillStyle = '#1e293b'; ctx.fillRect(px, py+TILE_SIZE-6, TILE_SIZE, 6); }
-                      else if (tile === TileType.BUSH) { ctx.fillStyle = '#22c55e'; ctx.globalAlpha = 0.6; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE); ctx.globalAlpha = 1.0; }
-                      else if (tile === TileType.WATER) { ctx.fillStyle = '#0ea5e9'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE); }
-                      else if (tile === TileType.GEM_SPAWNER) { ctx.fillStyle = '#1e1b4b'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2, py+TILE_SIZE/2, 12, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 2; ctx.stroke(); }
-                      else { ctx.fillStyle = '#475569'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE); }
-                  }
-              }
+            if (gameMode === 'gem_grab' && spawnerPosRef.current) {
+                const sx = spawnerPosRef.current.x * TILE_SIZE + TILE_SIZE/2;
+                const sy = spawnerPosRef.current.y * TILE_SIZE + TILE_SIZE/2;
+                const progress = 1 - (gemSpawnTimerRef.current / GEM_SPAWN_RATE);
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'rgba(168, 85, 247, 0.2)';
+                ctx.beginPath();
+                ctx.arc(sx, sy, 22, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.strokeStyle = '#a855f7';
+                ctx.beginPath();
+                ctx.arc(sx, sy, 22, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * progress));
+                ctx.stroke();
+            }
 
-              if (gameMode === 'gem_grab' && spawnerPosRef.current) {
-                  const sx = spawnerPosRef.current.x * TILE_SIZE + TILE_SIZE/2;
-                  const sy = spawnerPosRef.current.y * TILE_SIZE + TILE_SIZE/2;
-                  
-                  // Progress Ring
-                  const progress = 1 - (gemSpawnTimerRef.current / GEM_SPAWN_RATE);
-                  ctx.lineWidth = 4;
-                  ctx.strokeStyle = 'rgba(168, 85, 247, 0.2)';
-                  ctx.beginPath(); ctx.arc(sx, sy, 22, 0, Math.PI*2); ctx.stroke();
-                  ctx.strokeStyle = '#a855f7';
-                  ctx.beginPath(); ctx.arc(sx, sy, 22, -Math.PI/2, -Math.PI/2 + (Math.PI*2 * progress)); ctx.stroke();
-              }
+            const entities = [player, ...botsRef.current, ...safeboxesRef.current];
+            entities.sort((a, b) => a.y - b.y);
 
-              const entities = [player, ...botsRef.current, ...safeboxesRef.current].sort((a,b)=>a.y-b.y);
-              entities.forEach(ent => {
-                  if (ent.isDead) return;
-                  if (ent.isSafe) {
-                      ctx.fillStyle = ent.color; ctx.fillRect(ent.x-20, ent.y-20, 40, 40);
-                      ctx.strokeStyle = '#fff'; ctx.strokeRect(ent.x-20, ent.y-20, 40, 40);
-                      ctx.fillStyle = '#000'; ctx.fillRect(ent.x-24, ent.y-35, 48, 8);
-                      ctx.fillStyle = ent.team==='player'?'#3b82f6':'#ef4444'; ctx.fillRect(ent.x-23, ent.y-34, 46*(ent.hp/ent.maxHp), 6);
-                      return;
-                  }
-                  ctx.beginPath(); ctx.ellipse(ent.x, ent.y+12, 16, 8, 0, 0, Math.PI*2); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fill();
-                  ctx.beginPath(); ctx.arc(ent.x, ent.y, ent.radius, 0, Math.PI*2); ctx.fillStyle = ent.color; ctx.fill();
-                  ctx.strokeStyle = ent.id==='player'?'#ffff00':'#fff'; ctx.lineWidth = ent.id==='player'?2:3; ctx.stroke();
-                  ctx.save(); ctx.translate(ent.x, ent.y); ctx.rotate(ent.angle); ctx.fillStyle = '#333';
-                  
-                  if(ent.stats.name==='Tank') ctx.fillRect(10, -8, 24, 16); 
-                  else if(ent.stats.name==='Sniper') ctx.fillRect(10, -3, 35, 6); 
-                  else if(ent.stats.name==='Minigun') { ctx.fillRect(10, -5, 28, 10); ctx.fillStyle='#555'; ctx.fillRect(20, -5, 5, 10); ctx.fillRect(30, -5, 5, 10); }
-                  else if(ent.stats.name==='Hunter') { ctx.fillRect(10, -6, 20, 12); ctx.fillRect(25, -4, 6, 8); }
-                  else if(ent.stats.name==='Tech') { ctx.fillRect(10, -6, 22, 4); ctx.fillRect(10, 2, 22, 4); }
-                  else ctx.fillRect(10, -4, 20, 8);
-                  
-                  ctx.restore();
-                  const barW = 36;
-                  ctx.fillStyle = '#000'; ctx.fillRect(ent.x-barW/2, ent.y-30, barW, 6);
-                  ctx.fillStyle = ent.team==='player'?'#3b82f6':'#ef4444'; ctx.fillRect(ent.x-barW/2+1, ent.y-30+1, (barW-2)*(ent.hp/ent.maxHp), 4);
-                  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ent.x-barW/2-8, ent.y-27, 8, 0, Math.PI*2); ctx.fill();
-                  ctx.fillStyle = '#000'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillText(ent.level.toString(), ent.x-barW/2-8, ent.y-24);
-                  if(ent.gems>0) { ctx.save(); ctx.translate(ent.x, ent.y-45); ctx.fillStyle = '#a855f7'; ctx.beginPath(); ctx.moveTo(0,-6); ctx.lineTo(6,0); ctx.lineTo(0,6); ctx.lineTo(-6,0); ctx.fill(); ctx.fillStyle='#fff'; ctx.font='bold 12px Arial'; ctx.fillText(ent.gems.toString(), 0, -8); ctx.restore(); }
-              });
+            entities.forEach(ent => {
+                if (ent.isDead) return;
+                if (ent.isSafe) {
+                    ctx.fillStyle = ent.color;
+                    ctx.fillRect(ent.x - 20, ent.y - 20, 40, 40);
+                    ctx.strokeStyle = '#fff';
+                    ctx.strokeRect(ent.x - 20, ent.y - 20, 40, 40);
+                    const hpPct = ent.hp / ent.maxHp;
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(ent.x - 24, ent.y - 35, 48, 8);
+                    ctx.fillStyle = ent.team === 'player' ? '#3b82f6' : '#ef4444';
+                    ctx.fillRect(ent.x - 24 + 1, ent.y - 35 + 1, 46 * hpPct, 6);
+                    return;
+                }
 
-              gemsRef.current.forEach(g => {
-                  if(g.collected) return;
-                  const b = Math.sin(Date.now()/200)*3;
-                  ctx.save(); ctx.translate(g.x, g.y+b); ctx.fillStyle='#d8b4fe'; ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(8,0); ctx.lineTo(0,8); ctx.lineTo(-8,0); ctx.fill(); ctx.strokeStyle='#a855f7'; ctx.stroke(); ctx.restore();
-              });
+                ctx.beginPath();
+                ctx.ellipse(ent.x, ent.y + 12, 16, 8, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fill();
 
-              bulletsRef.current.forEach(b => {
-                  ctx.save(); ctx.translate(b.x, b.y); ctx.fillStyle = b.team==='player'?'#93c5fd':'#fca5a5'; ctx.beginPath(); ctx.arc(0,0,6,0,Math.PI*2); ctx.fill(); ctx.restore();
-              });
+                ctx.beginPath();
+                ctx.arc(ent.x, ent.y, ent.radius, 0, Math.PI * 2);
+                ctx.fillStyle = ent.color;
+                ctx.fill();
+                if (ent.id === 'player') {
+                    ctx.strokeStyle = '#ffff00';
+                    ctx.lineWidth = 2;
+                } else {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 3;
+                }
+                ctx.stroke();
 
-              ctx.restore();
+                ctx.save();
+                ctx.translate(ent.x, ent.y);
+                ctx.rotate(ent.angle);
+                ctx.fillStyle = '#333';
+                if (ent.stats.name === 'Tank') ctx.fillRect(10, -8, 24, 16); 
+                else if (ent.stats.name === 'Sniper') ctx.fillRect(10, -3, 35, 6);
+                else if (ent.stats.name === 'Golem') ctx.fillRect(10, -10, 18, 20);
+                else if (ent.stats.name === 'Spy') ctx.fillRect(10, -2, 16, 4);
+                else ctx.fillRect(10, -4, 20, 8);
+                ctx.restore();
 
-              if(gameMode === 'heist') {
-                 const eSafe = safeboxesRef.current.find(s => s.team === 'enemy');
-                 if(eSafe && !eSafe.isDead) {
-                    const sx = eSafe.x + camX, sy = eSafe.y + camY;
-                    if(sx<0 || sx>canvas.width || sy<0 || sy>canvas.height) {
-                        const a = Math.atan2(eSafe.y-player.y, eSafe.x-player.x);
-                        const r = Math.min(canvas.width, canvas.height)/2 - 50;
-                        ctx.save(); ctx.translate(canvas.width/2 + Math.cos(a)*r, canvas.height/2 + Math.sin(a)*r); ctx.rotate(a);
-                        ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(-10,10); ctx.lineTo(-10,-10); ctx.fill();
+                const hpPct = ent.hp / ent.maxHp;
+                const barW = 36;
+                ctx.fillStyle = '#000';
+                ctx.fillRect(ent.x - barW/2, ent.y - 30, barW, 6);
+                ctx.fillStyle = ent.team === 'player' ? '#3b82f6' : '#ef4444';
+                ctx.fillRect(ent.x - barW/2 + 1, ent.y - 30 + 1, (barW-2) * hpPct, 4);
+
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(ent.x - barW/2 - 8, ent.y - 27, 8, 0, Math.PI*2);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(ent.level.toString(), ent.x - barW/2 - 8, ent.y - 24);
+
+                if (ent.gems > 0) {
+                    ctx.save();
+                    ctx.translate(ent.x, ent.y - 45);
+                    ctx.fillStyle = '#a855f7';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -6);
+                    ctx.lineTo(6, 0);
+                    ctx.lineTo(0, 6);
+                    ctx.lineTo(-6, 0);
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(ent.gems.toString(), 0, -8);
+                    ctx.restore();
+                }
+            });
+
+            gemsRef.current.forEach(g => {
+                if (g.collected) return;
+                const bounce = Math.sin(Date.now() / 200) * 3;
+                ctx.save();
+                ctx.translate(g.x, g.y + bounce);
+                ctx.fillStyle = '#d8b4fe';
+                ctx.beginPath();
+                ctx.moveTo(0, -8);
+                ctx.lineTo(8, 0);
+                ctx.lineTo(0, 8);
+                ctx.lineTo(-8, 0);
+                ctx.fill();
+                ctx.strokeStyle = '#a855f7';
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            bulletsRef.current.forEach(b => {
+                ctx.save();
+                ctx.translate(b.x, b.y);
+                ctx.fillStyle = b.team === 'player' ? '#93c5fd' : '#fca5a5';
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+            });
+            ctx.restore();
+
+            if (gameMode === 'heist') {
+                const eSafe = safeboxesRef.current.find(s => s.team === 'enemy');
+                if (eSafe && !eSafe.isDead) {
+                    const sx = eSafe.x + camX;
+                    const sy = eSafe.y + camY;
+                    const isOnScreen = sx > 0 && sx < canvas.width && sy > 0 && sy < canvas.height;
+
+                    if (!isOnScreen) {
+                        const angle = Math.atan2(eSafe.y - player.y, eSafe.x - player.x);
+                        const padding = 50;
+                        const cx = canvas.width / 2;
+                        const cy = canvas.height / 2;
+                        const r = Math.min(canvas.width, canvas.height)/2 - padding;
+                        const ix = cx + Math.cos(angle) * r;
+                        const iy = cy + Math.sin(angle) * r;
+
+                        ctx.save();
+                        ctx.translate(ix, iy);
+                        ctx.rotate(angle);
+                        ctx.fillStyle = '#ef4444';
+                        ctx.beginPath();
+                        ctx.moveTo(10, 0);
+                        ctx.lineTo(-10, 10);
+                        ctx.lineTo(-10, -10);
+                        ctx.fill();
+                        ctx.font = 'bold 12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillStyle = '#fff';
+                        ctx.rotate(-angle); 
+                        ctx.fillText("ATTACK", 0, 20);
                         ctx.restore();
                     }
-                 }
-              }
+                }
+            }
           };
 
           useEffect(() => {
-             let aid;
-             const render = () => { update(); draw(); aid = requestAnimationFrame(render); };
-             render();
-             return () => cancelAnimationFrame(aid);
-          }, [map]);
+            let animationFrameId;
+            const render = () => {
+              update();
+              draw();
+              animationFrameId = requestAnimationFrame(render);
+            };
+            render();
+            return () => cancelAnimationFrame(animationFrameId);
+          }, [map]); 
 
-          const getScoreLabel = () => { if(gameMode === 'gem_grab') return 'Total Gems'; if(gameMode === 'heist') return 'Safe HP'; return 'Enemies'; };
+          const getScoreLabel = () => {
+              if (gameMode === 'gem_grab') return 'Total Gems';
+              if (gameMode === 'heist') return 'Safe HP';
+              return 'Enemies';
+          };
 
           return (
-             <div className="relative w-full h-full flex justify-center items-center bg-slate-900 overflow-hidden">
+            <div className="relative w-full h-full flex justify-center items-center bg-slate-900 overflow-hidden">
                 <div className="absolute top-4 left-4 z-10 pointer-events-none">
                     <div className="bg-slate-800/80 p-3 rounded-lg border-l-4 border-blue-500 min-w-[160px] shadow-lg">
-                        <div className="flex justify-between items-center mb-1"><span className="text-xs font-bold text-blue-400 uppercase tracking-widest">ALLY TEAM</span><span className="text-xs font-bold text-white">{characterClass.toUpperCase()}</span></div>
-                        <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-green-500 transition-all duration-200" style={{width: `${Math.max(0, (playerHp/playerMaxHp)*100)}%`}} /></div>
-                        <div className="mt-2 flex items-center gap-2"><span className="text-xl font-black text-purple-400">{scoreP}</span><span className="text-xs text-slate-300 uppercase">{getScoreLabel()}</span></div>
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">ALLY TEAM</span>
+                            <span className="text-xs font-bold text-white">{characterClass.toUpperCase()}</span>
+                        </div>
+                        <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 transition-all duration-200" style={{width: `${Math.max(0, (playerHp/playerMaxHp)*100)}%`}} />
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                             <span className="text-xl font-black text-purple-400">{scoreP}</span>
+                             <span className="text-xs text-slate-300 uppercase">{getScoreLabel()}</span>
+                        </div>
                     </div>
-                    <div className="mt-2 w-full h-1 bg-slate-700 rounded overflow-hidden"><div className="h-full bg-yellow-500 transition-all duration-75" style={{width: `${ammo}%`}} /></div>
+                    <div className="mt-2 w-full h-1 bg-slate-700 rounded overflow-hidden">
+                         <div className="h-full bg-yellow-500 transition-all duration-75" style={{width: `${ammo}%`}} />
+                    </div>
                 </div>
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex gap-2">
-                    <button onClick={onExit} className="bg-slate-800/80 hover:bg-slate-700 text-white px-4 py-2 rounded-full font-bold shadow-lg border border-slate-600 backdrop-blur pointer-events-auto flex items-center gap-2 transition-transform active:scale-95"><Home size={16} /><span className="text-sm">EXIT</span></button>
+                    <button onClick={onExit} className="bg-slate-800/80 hover:bg-slate-700 text-white px-4 py-2 rounded-full font-bold shadow-lg border border-slate-600 backdrop-blur pointer-events-auto flex items-center gap-2 transition-transform active:scale-95">
+                        <Home size={16} /><span className="text-sm">EXIT</span>
+                    </button>
                 </div>
                 <div className="absolute top-4 right-4 z-10 pointer-events-none text-right">
                      <div className="bg-slate-800/80 p-3 rounded-lg border-r-4 border-red-500 min-w-[160px] shadow-lg">
-                        <div className="flex justify-between items-center mb-1"><span className="text-xs font-bold text-white uppercase">{gameMode.replace('_', ' ')}</span><span className="text-xs font-bold text-red-400 uppercase tracking-widest">ENEMY</span></div>
-                        <div className="flex items-center justify-end gap-2"><span className="text-xs text-slate-300 uppercase">{getScoreLabel()}</span><span className="text-xl font-black text-red-400">{scoreE}</span></div>
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold text-white uppercase">{gameMode.replace('_', ' ')}</span>
+                            <span className="text-xs font-bold text-red-400 uppercase tracking-widest">ENEMY</span>
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                             <span className="text-xs text-slate-300 uppercase">{getScoreLabel()}</span>
+                             <span className="text-xl font-black text-red-400">{scoreE}</span>
+                        </div>
                     </div>
                 </div>
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none w-1/3 min-w-[200px]">
-                    <div className="flex justify-between text-xs font-bold text-white drop-shadow-md mb-1 px-1"><span>LVL {inGameLevel}</span><span>{(inGameXp / inGameMaxXp * 100).toFixed(0)}%</span></div>
-                    <div className="w-full h-4 bg-black/50 rounded-full border border-slate-500/50 backdrop-blur-sm overflow-hidden p-[2px]"><div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-300" style={{width: `${Math.min(100, (inGameXp / inGameMaxXp)*100)}%`}} /></div>
+                    <div className="flex justify-between text-xs font-bold text-white drop-shadow-md mb-1 px-1">
+                         <span>LVL {inGameLevel}</span>
+                         <span>{(inGameXp / inGameMaxXp * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full h-4 bg-black/50 rounded-full border border-slate-500/50 backdrop-blur-sm overflow-hidden p-[2px]">
+                        <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-300" style={{width: `${Math.min(100, (inGameXp / inGameMaxXp)*100)}%`}} />
+                    </div>
                 </div>
-                {playerDead && <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] pointer-events-none"><h2 className="text-4xl font-black text-red-500 uppercase tracking-widest drop-shadow-lg mb-2">You Died</h2><div className="text-2xl font-bold text-white">Respawning in {respawnTime}...</div></div>}
+                {playerDead && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] pointer-events-none">
+                        <h2 className="text-4xl font-black text-red-500 uppercase tracking-widest drop-shadow-lg mb-2">You Died</h2>
+                        <div className="text-2xl font-bold text-white">Respawning in {respawnTime}...</div>
+                    </div>
+                )}
                 <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight} />
-             </div>
+            </div>
           );
         };
 
         // --- APP COMPONENT ---
-        const BOXES = [
-          { id: 'brawl', name: 'Brawl Box', price: 100, minCoins: 10, maxCoins: 60, color: 'bg-blue-600' },
-          { id: 'big', name: 'Big Box', price: 300, minCoins: 60, maxCoins: 250, color: 'bg-purple-600' },
-          { id: 'mega', name: 'Mega Box', price: 800, minCoins: 250, maxCoins: 750, color: 'bg-yellow-500' },
-        ];
-        
-        const HelpModal = ({ onClose }) => (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-slate-800 border border-slate-600 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
-              <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
-              <h2 className="text-2xl font-black text-white mb-4 uppercase italic flex items-center gap-2"><HelpCircle size={24} className="text-yellow-400" /> How to Play</h2>
-              
-              <div className="space-y-4 text-slate-300 text-sm">
-                <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
-                   <div className="flex gap-2 shrink-0">
-                     <div className="w-10 h-10 rounded-full border-2 border-blue-500 bg-slate-800 flex items-center justify-center text-[10px] text-blue-200 font-bold">Move</div>
-                     <div className="w-10 h-10 rounded-full border-2 border-red-500 bg-slate-800 flex items-center justify-center text-[10px] text-red-200 font-bold">Aim</div>
-                   </div>
-                   <div>
-                     <p className="font-bold text-white mb-1">Controls</p>
-                     <p className="text-xs leading-relaxed">Left Joystick to Move. Right Joystick to Aim & Shoot. Release to fire.</p>
-                   </div>
-                </div>
-
-                <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
-                   <div className="w-12 flex justify-center"><Gem className="text-purple-400 shrink-0" size={28} /></div>
-                   <div>
-                     <p className="font-bold text-purple-400 mb-1">Gem Grab</p>
-                     <p className="text-xs leading-relaxed">Collect 10 Gems from the center mine. Hold them for the countdown to win!</p>
-                   </div>
-                </div>
-
-                <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
-                   <div className="w-12 flex justify-center relative">
-                     <Shield className="text-red-400 shrink-0" size={28} />
-                   </div>
-                   <div>
-                     <p className="font-bold text-red-400 mb-1">Heist</p>
-                     <p className="text-xs leading-relaxed">Destroy the Enemy Safe (Red). Defend your Safe (Blue) from enemies.</p>
-                   </div>
-                </div>
-                
-                 <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
-                   <div className="w-12 flex justify-center"><div className="w-8 h-8 bg-green-500/50 rounded flex items-center justify-center border border-green-500"><div className="w-6 h-6 bg-green-600 rounded-sm"></div></div></div>
-                   <div>
-                     <p className="font-bold text-green-400 mb-1">Tactics</p>
-                     <p className="text-xs leading-relaxed">Hide in green bushes to ambush. Walls block enemy bullets.</p>
-                   </div>
-                </div>
-              </div>
-
-              <button onClick={onClose} className="mt-6 w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black uppercase tracking-wider py-3 rounded-xl shadow-lg transition-transform active:scale-95">
-                Got it!
-              </button>
-            </div>
-          </div>
-        );
-
         const App = () => {
           const [screen, setScreen] = useState('menu');
           const [map, setMap] = useState(null);
           const [result, setResult] = useState(null);
-          const [coins, setCoins] = useState(0);
+          const [coins, setCoins] = useState(300);
           const [unlockedChars, setUnlockedChars] = useState(['speedy']);
           const [level, setLevel] = useState(1);
           const [xp, setXp] = useState(0);
           const [xpGained, setXpGained] = useState(0);
+          const [coinsGained, setCoinsGained] = useState(0);
           const [selectedChar, setSelectedChar] = useState('speedy');
           const [selectedMode, setSelectedMode] = useState('gem_grab');
           const [difficulty, setDifficulty] = useState('normal');
           const [showTutorial, setShowTutorial] = useState(false);
+          const [promoCode, setPromoCode] = useState('');
+          const [winStreak, setWinStreak] = useState(0);
+          const [lastStreakBonus, setLastStreakBonus] = useState(0);
+
+          const inputRef = useRef({ move: { x: 0, y: 0 }, aim: { x: 0, y: 0, active: false }, shootRequest: false });
 
           useEffect(() => {
             const savedCoins = localStorage.getItem('brawl_coins');
             const savedChars = localStorage.getItem('brawl_chars');
             const savedLevel = localStorage.getItem('brawl_level');
             const savedXp = localStorage.getItem('brawl_xp');
+            const savedStreak = localStorage.getItem('brawl_streak');
             if (savedCoins) setCoins(parseInt(savedCoins));
-            if (savedChars) { try { const parsed = JSON.parse(savedChars); setUnlockedChars(parsed.filter(c => CHARACTERS[c])); } catch(e) { setUnlockedChars(['speedy']); } }
+            if (savedChars) {
+                try {
+                    const parsed = JSON.parse(savedChars);
+                    const valid = parsed.filter((c) => Object.keys(CHARACTERS).includes(c));
+                    setUnlockedChars(valid);
+                    if (!valid.includes(selectedChar)) setSelectedChar('speedy');
+                } catch(e) { setUnlockedChars(['speedy']); }
+            }
             if (savedLevel) setLevel(parseInt(savedLevel));
             if (savedXp) setXp(parseInt(savedXp));
+            if (savedStreak) setWinStreak(parseInt(savedStreak));
           }, []);
 
           useEffect(() => {
@@ -876,113 +1077,215 @@
             localStorage.setItem('brawl_chars', JSON.stringify(unlockedChars));
             localStorage.setItem('brawl_level', level.toString());
             localStorage.setItem('brawl_xp', xp.toString());
-          }, [coins, unlockedChars, level, xp]);
+            localStorage.setItem('brawl_streak', winStreak.toString());
+          }, [coins, unlockedChars, level, xp, winStreak]);
 
-          const inputRef = useRef({ move: { x: 0, y: 0 }, aim: { x: 0, y: 0, active: false }, shootRequest: false });
           const getXpForNextLevel = (lvl) => lvl * 100;
 
           const handleStartGame = async () => {
-            if (!unlockedChars.includes(selectedChar)) return;
+            if (!unlockedChars.includes(selectedChar)) return; 
             setScreen('loading');
-            const newMap = await generateGameMap(selectedMode);
-            setMap(newMap);
-            setScreen('game');
+            try {
+              const newMap = await generateGameMap(selectedMode);
+              setMap(newMap);
+              setScreen('game');
+            } catch (e) { console.error(e); setScreen('menu'); }
           };
 
           const handleGameOver = (res, gems) => {
             setResult(res);
-            let rewardCoins = res === 'win' ? (difficulty==='hard'?100:(difficulty==='easy'?30:60)) : 10;
-            let rewardXp = res === 'win' ? (difficulty==='hard'?80:50) : 10;
+            let rewardCoins = 0;
+            let rewardXp = 0;
+            let currentStreak = winStreak;
+            let bonus = 0;
+            if (res === 'win') {
+                rewardCoins = 20; rewardXp = 50;
+                if (difficulty === 'hard') { rewardCoins += 15; rewardXp += 30; } 
+                else if (difficulty === 'easy') { rewardCoins = 10; rewardXp = 30; }
+                const newStreak = currentStreak + 1;
+                bonus = Math.min(newStreak * 5, 50);
+                rewardCoins += bonus;
+                setWinStreak(newStreak);
+            } else {
+                rewardCoins = 5; rewardXp = 10 + Math.floor(gems * 2);
+                setWinStreak(0);
+            }
+            setLastStreakBonus(bonus);
             setCoins(prev => prev + rewardCoins);
-            let newXp = xp + rewardXp, newLevel = level;
+            setCoinsGained(rewardCoins);
             const maxXp = getXpForNextLevel(level);
-            if(newXp >= maxXp) { newXp -= maxXp; newLevel++; }
+            let newXp = xp + rewardXp;
+            let newLevel = level;
+            if (newXp >= maxXp) { newXp -= maxXp; newLevel++; }
             setXp(newXp); setLevel(newLevel); setXpGained(rewardXp);
             setScreen('result');
           };
 
-          const buyCharacter = (char) => {
-             const cost = CHARACTERS[char].price;
-             if (coins >= cost && !unlockedChars.includes(char)) { setCoins(prev => prev - cost); setUnlockedChars(prev => [...prev, char]); setSelectedChar(char); }
-          };
-
-          const openBox = (idx) => {
-             const box = BOXES[idx];
-             if (coins >= box.price) {
-                 const reward = Math.floor(Math.random() * (box.maxCoins - box.minCoins + 1)) + box.minCoins;
-                 setCoins(prev => prev - box.price + reward);
-                 alert(`Opened ${box.name}! Paid ${box.price}, Found ${reward} Coins! (Net: ${reward - box.price})`);
+          const handleRedeemCode = () => {
+             if (promoCode === '6321') {
+                 if (!unlockedChars.includes('sniper')) {
+                     setUnlockedChars(prev => [...prev, 'sniper']);
+                     alert('Code Redeemed! Sniper Unlocked!');
+                     setSelectedChar('sniper');
+                 } else {
+                     alert('You already have Sniper!');
+                 }
+                 setPromoCode('');
+             } else {
+                 alert('Invalid Code');
              }
           };
 
-          const CharacterCard = ({ type }) => {
-             const stats = CHARACTERS[type];
-             const isUnlocked = unlockedChars.includes(type);
-             const isSelected = selectedChar === type;
-             const canAfford = coins >= stats.price;
-             let Icon = Zap;
-             if (type === 'tank') Icon = Shield;
-             if (type === 'sniper') Icon = Crosshair;
-             if (type === 'ninja') Icon = Ghost;
-             if (type === 'minigun') Icon = Flame;
-             if (type === 'hunter') Icon = Target;
-             if (type === 'tech') Icon = Cpu;
+          const handleMove = (x, y, active) => { inputRef.current.move = { x, y }; };
+          const handleAim = (x, y, active) => {
+              if (inputRef.current.aim.active && !active) inputRef.current.shootRequest = true;
+              inputRef.current.aim = { x, y, active };
+          };
 
-             return (
-                 <button onClick={() => { if(isUnlocked) setSelectedChar(type); else buyCharacter(type); }}
-                    className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border-2 relative overflow-hidden group ${isSelected ? 'border-white shadow-lg' : 'bg-slate-700 border-transparent'} ${!isUnlocked ? 'opacity-90 grayscale-[0.5]' : 'hover:opacity-100'}`}
-                    style={{ borderColor: isSelected ? stats.color : 'transparent', backgroundColor: isSelected ? 'rgba(30,41,59,0.8)' : undefined }}>
-                     <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${isUnlocked ? 'bg-slate-800' : 'bg-slate-900'}`}>{isUnlocked ? <Icon size={24} style={{color: stats.color}}/> : <Lock size={24} className="text-slate-500"/>}</div>
-                     <div className="text-left flex-1"><div className="font-bold text-sm flex justify-between items-center">{stats.name} {!isUnlocked && <span className={`text-xs px-2 py-1 rounded-full ${canAfford ? 'bg-yellow-500 text-black' : 'bg-slate-600 text-slate-400'}`}>{stats.price} 🪙</span>}</div></div>
-                 </button>
-             );
+          const buyCharacter = (char) => {
+            const cost = CHARACTERS[char].price;
+            if (coins >= cost && !unlockedChars.includes(char)) {
+                setCoins(prev => prev - cost);
+                setUnlockedChars(prev => [...prev, char]);
+                setSelectedChar(char);
+            }
+          };
+
+          const openBox = (boxIndex) => {
+            const box = BOXES[boxIndex];
+            if (coins >= box.price) {
+                setCoins(prev => prev - box.price);
+                const reward = Math.floor(Math.random() * (box.maxCoins - box.minCoins + 1)) + box.minCoins;
+                setCoins(prev => prev + reward);
+                alert(`You opened a ${box.name}!\nFound ${reward} Coins!`);
+            }
+          };
+
+          const CharacterCard = ({ type }) => {
+            const stats = CHARACTERS[type];
+            const isUnlocked = unlockedChars.includes(type);
+            const isSelected = selectedChar === type;
+            const canAfford = coins >= stats.price;
+            let Icon = Zap;
+            if (type === 'tank') Icon = Shield;
+            if (type === 'sniper') Icon = Crosshair;
+            if (type === 'ninja') Icon = Ghost;
+            if (type === 'minigun') Icon = Flame;
+            if (type === 'hunter') Icon = Target;
+            if (type === 'tech') Icon = Cpu;
+            if (type === 'spy') Icon = Eye;
+            if (type === 'golem') Icon = Hammer;
+
+            return (
+                <button onClick={() => { if (isUnlocked) setSelectedChar(type); else buyCharacter(type); }}
+                className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border-2 relative overflow-hidden group
+                    ${isSelected ? `bg-${stats.color.replace('#','')} border-white shadow-lg` : 'bg-slate-700 border-transparent'}
+                    ${!isUnlocked ? 'opacity-90 grayscale-[0.5]' : 'hover:opacity-100'}
+                `}
+                style={{ borderColor: isSelected ? stats.color : 'transparent', backgroundColor: isSelected ? 'rgba(30,41,59,0.8)' : undefined }}>
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${isUnlocked ? 'bg-slate-800' : 'bg-slate-900'}`}>
+                        {isUnlocked ? <Icon size={24} style={{color: stats.color}}/> : <Lock size={24} className="text-slate-500"/>}
+                    </div>
+                    <div className="text-left flex-1">
+                        <div className="font-bold text-sm flex justify-between items-center">
+                            {stats.name}
+                            {!isUnlocked && ( <span className={`text-xs px-2 py-1 rounded-full ${canAfford ? 'bg-yellow-500 text-black' : 'bg-slate-600 text-slate-400'}`}>{stats.price} 🪙</span> )}
+                        </div>
+                        <div className="text-[10px] text-slate-300 opacity-80">
+                            {type === 'speedy' && "Fast • High DPS"}
+                            {type === 'tank' && "High HP • Shotgun"}
+                            {type === 'sniper' && "Long Range • High Dmg"}
+                            {type === 'golem' && "Tanky • Close Range"}
+                            {type === 'spy' && "Fast • Stealthy"}
+                        </div>
+                    </div>
+                </button>
+            );
           };
 
           return (
             <div className="w-screen h-screen bg-slate-900 text-white font-sans overflow-hidden select-none touch-none">
-              {showTutorial && <HelpModal onClose={() => setShowTutorial(false)} />}
+              {showTutorial && (
+                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-slate-800 border border-slate-600 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+                      <button onClick={()=>setShowTutorial(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
+                      <h2 className="text-2xl font-black text-white mb-4 uppercase italic flex items-center gap-2"><HelpCircle size={24} className="text-yellow-400" /> How to Play</h2>
+                      <div className="space-y-4 text-slate-300 text-sm">
+                        <div className="flex items-center gap-4 bg-slate-700/50 p-3 rounded-xl border border-slate-600/50">
+                           <div className="flex gap-2 shrink-0">
+                             <div className="w-10 h-10 rounded-full border-2 border-blue-500 bg-slate-800 flex items-center justify-center text-[10px] text-blue-200 font-bold">Move</div>
+                             <div className="w-10 h-10 rounded-full border-2 border-red-500 bg-slate-800 flex items-center justify-center text-[10px] text-red-200 font-bold">Aim</div>
+                           </div>
+                           <div><p className="font-bold text-white mb-1">Controls</p><p className="text-xs leading-relaxed">Left Joystick to Move. Right Joystick to Aim & Shoot. Release to fire.</p></div>
+                        </div>
+                        <button onClick={()=>setShowTutorial(false)} className="mt-6 w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black uppercase tracking-wider py-3 rounded-xl shadow-lg transition-transform active:scale-95">Got it!</button>
+                      </div>
+                    </div>
+                  </div>
+              )}
               
               {screen === 'menu' && (
                 <div className="w-full h-full flex flex-col items-center justify-start p-4 relative overflow-y-auto">
+                  <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none fixed">
+                    <div className="absolute top-10 left-10 w-32 h-32 bg-blue-500 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-10 right-10 w-64 h-64 bg-red-500 rounded-full blur-3xl"></div>
+                  </div>
+
                   <div className="z-10 w-full max-w-2xl bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-slate-700 mt-4 mb-20">
                      <div className="flex justify-between items-start mb-6">
-                         <div><h1 className="text-4xl font-black italic tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-br from-yellow-400 to-orange-600 drop-shadow-sm">Brawl Arena</h1><div className="mt-2 flex items-center gap-2"><div className="bg-blue-600 text-xs font-bold px-2 py-0.5 rounded text-white flex items-center gap-1 shadow-sm border border-blue-400"><Star size={10} className="fill-white"/> LVL {level}</div><div className="w-24 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-600"><div className="h-full bg-blue-400" style={{width: `${(xp / getXpForNextLevel(level)) * 100}%`}}></div></div></div></div>
+                         <div>
+                            <h1 className="text-4xl font-black italic tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-br from-yellow-400 to-orange-600 drop-shadow-sm">Brawl Arena</h1>
+                            <div className="mt-2 flex items-center gap-2">
+                                <div className="bg-blue-600 text-xs font-bold px-2 py-0.5 rounded text-white flex items-center gap-1 shadow-sm border border-blue-400"><Star size={10} className="fill-white"/> LVL {level}</div>
+                                <div className="w-24 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-600"><div className="h-full bg-blue-400" style={{width: `${(xp / getXpForNextLevel(level)) * 100}%`}}></div></div>
+                            </div>
+                         </div>
                          <div className="flex gap-2">
                              <button onClick={() => setShowTutorial(true)} className="bg-slate-700 hover:bg-slate-600 w-10 h-10 rounded-full flex items-center justify-center border border-slate-500 text-slate-300 shadow-lg"><HelpCircle size={20} /></button>
                              <div className="bg-slate-900 px-4 py-2 rounded-full border border-yellow-600/50 flex items-center gap-2 shadow-inner"><Coins className="text-yellow-400 fill-yellow-400" size={20} /><span className="font-black text-xl text-yellow-100">{coins}</span></div>
                          </div>
                      </div>
+
                      <div className="grid md:grid-cols-2 gap-8">
                          <div>
-                            <h3 className="text-slate-400 font-bold text-xs uppercase mb-3 tracking-widest flex items-center gap-2">Brawlers <span className="bg-slate-700 text-white px-2 rounded-full text-[10px]">{unlockedChars.length}/7</span></h3>
-                            <div className="space-y-3">
-                                <CharacterCard type="speedy"/>
-                                <CharacterCard type="tank"/>
-                                <CharacterCard type="sniper"/>
-                                <CharacterCard type="ninja"/>
-                                <CharacterCard type="minigun"/>
-                                <CharacterCard type="hunter"/>
-                                <CharacterCard type="tech"/>
-                            </div>
+                             <h3 className="text-slate-400 font-bold text-xs uppercase mb-3 tracking-widest flex items-center gap-2">Brawlers <span className="bg-slate-700 text-white px-2 rounded-full text-[10px]">{unlockedChars.length}/9</span></h3>
+                             <div className="space-y-3">
+                                 {Object.keys(CHARACTERS).map(key => <CharacterCard key={key} type={key} />)}
+                             </div>
                          </div>
                          <div className="flex flex-col">
                              <h3 className="text-slate-400 font-bold text-xs uppercase mb-3 tracking-widest">Events</h3>
                              <div className="space-y-3 mb-6">
-                                 <button onClick={() => setSelectedMode('gem_grab')} className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border-2 ${selectedMode === 'gem_grab' ? 'bg-indigo-600 border-indigo-400' : 'bg-slate-700 border-transparent opacity-60 hover:opacity-100'}`}><div className="w-10 h-10 rounded-lg bg-indigo-900 flex items-center justify-center"><Gem size={20} className="text-indigo-400"/></div><div className="text-left font-bold text-sm">Gem Grab</div></button>
-                                 <button onClick={() => setSelectedMode('heist')} className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border-2 ${selectedMode === 'heist' ? 'bg-orange-600 border-orange-400' : 'bg-slate-700 border-transparent opacity-60 hover:opacity-100'}`}><div className="w-10 h-10 rounded-lg bg-orange-900 flex items-center justify-center"><Shield size={20} className="text-orange-400"/></div><div className="text-left font-bold text-sm">Heist</div></button>
-                                 <button onClick={() => setSelectedMode('duel')} className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border-2 ${selectedMode === 'duel' ? 'bg-red-600 border-red-400' : 'bg-slate-700 border-transparent opacity-60 hover:opacity-100'}`}><div className="w-10 h-10 rounded-lg bg-red-900 flex items-center justify-center"><Swords size={20} className="text-red-400"/></div><div className="text-left font-bold text-sm">Duel</div></button>
+                                 <button onClick={() => setSelectedMode('gem_grab')} className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border-2 ${selectedMode === 'gem_grab' ? 'bg-indigo-600 border-indigo-400' : 'bg-slate-700 border-transparent opacity-60 hover:opacity-100'}`}>
+                                     <div className="w-10 h-10 rounded-lg bg-indigo-900 flex items-center justify-center"><Gem size={20} className="text-indigo-400"/></div>
+                                     <div className="text-left"><div className="font-bold text-sm">Gem Grab</div><div className="text-[10px] text-indigo-200">Collect 10 Gems</div></div>
+                                 </button>
+                                 <button onClick={() => setSelectedMode('heist')} className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border-2 ${selectedMode === 'heist' ? 'bg-orange-600 border-orange-400' : 'bg-slate-700 border-transparent opacity-60 hover:opacity-100'}`}>
+                                     <div className="w-10 h-10 rounded-lg bg-orange-900 flex items-center justify-center"><Shield size={20} className="text-orange-400"/></div>
+                                     <div className="text-left"><div className="font-bold text-sm">Heist</div><div className="text-[10px] text-orange-200">Destroy Enemy Safe</div></div>
+                                 </button>
+                                 <button onClick={() => setSelectedMode('duel')} className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border-2 ${selectedMode === 'duel' ? 'bg-red-600 border-red-400' : 'bg-slate-700 border-transparent opacity-60 hover:opacity-100'}`}>
+                                     <div className="w-10 h-10 rounded-lg bg-red-900 flex items-center justify-center"><Swords size={20} className="text-red-400"/></div>
+                                     <div className="text-left"><div className="font-bold text-sm">Duel</div><div className="text-[10px] text-red-200">1v1 Deathmatch</div></div>
+                                 </button>
                              </div>
                              <h3 className="text-slate-400 font-bold text-xs uppercase mb-3 tracking-widest flex items-center gap-2">Difficulty <Gauge size={14} /></h3>
                              <div className="flex bg-slate-900/50 p-1 rounded-xl gap-1">
-                                <button onClick={() => setDifficulty('easy')} className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition-all flex flex-col items-center gap-1 ${difficulty === 'easy' ? 'bg-green-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:text-slate-300'}`}><span>Easy</span></button>
-                                <button onClick={() => setDifficulty('normal')} className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition-all flex flex-col items-center gap-1 ${difficulty === 'normal' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:text-slate-300'}`}><span>Normal</span></button>
-                                <button onClick={() => setDifficulty('hard')} className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition-all flex flex-col items-center gap-1 ${difficulty === 'hard' ? 'bg-red-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:text-slate-300'}`}><span>Hard</span></button>
+                                {['easy', 'normal', 'hard'].map(d => (
+                                    <button key={d} onClick={() => setDifficulty(d)} className={`flex-1 py-2 rounded-lg text-xs font-black uppercase transition-all flex flex-col items-center gap-1 ${difficulty === d ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-slate-500 hover:text-slate-300'}`}><span>{d}</span></button>
+                                ))}
                              </div>
                          </div>
                      </div>
+
                      <div className="flex gap-4 mt-8">
                         <button onClick={() => setScreen('shop')} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg py-4 rounded-xl shadow-[0_4px_0_rgb(107,33,168)] active:shadow-none active:translate-y-1 transition-all flex items-center justify-center gap-2"><ShoppingBag size={24} />Shop</button>
                         <button onClick={handleStartGame} className="flex-[2] bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black text-xl py-4 rounded-xl shadow-[0_4px_0_rgb(161,98,7)] active:shadow-none active:translate-y-1 transition-all flex items-center justify-center gap-3 uppercase tracking-wide"><Dices size={24} />Battle!</button>
+                     </div>
+                     
+                     <div className="mt-4 pt-4 border-t border-slate-700 flex justify-center items-center gap-2">
+                        <input type="text" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="Secret Code" className="bg-slate-900 text-slate-200 text-sm px-3 py-2 rounded-lg border border-slate-600 outline-none focus:border-yellow-500 w-32" />
+                        <button onClick={handleRedeemCode} className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold px-3 py-2 rounded-lg border border-slate-600">Redeem</button>
                      </div>
                   </div>
                 </div>
@@ -991,12 +1294,18 @@
               {screen === 'shop' && (
                 <div className="w-full h-full flex flex-col items-center bg-slate-900 p-4 relative overflow-y-auto">
                      <div className="w-full max-w-2xl mt-4 mb-20">
-                        <div className="flex items-center justify-between mb-8"><button onClick={() => setScreen('menu')} className="text-slate-400 font-bold hover:text-white">← Back</button><div className="bg-slate-800 px-4 py-2 rounded-full border border-yellow-600/50 flex items-center gap-2"><Coins className="text-yellow-400 fill-yellow-400" size={20} /><span className="font-black text-xl text-yellow-100">{coins}</span></div></div>
+                        <div className="flex items-center justify-between mb-8">
+                            <button onClick={() => setScreen('menu')} className="text-slate-400 font-bold hover:text-white">← Back</button>
+                            <div className="bg-slate-800 px-4 py-2 rounded-full border border-yellow-600/50 flex items-center gap-2"><Coins className="text-yellow-400 fill-yellow-400" size={20} /><span className="font-black text-xl text-yellow-100">{coins}</span></div>
+                        </div>
                         <h2 className="text-2xl font-black italic uppercase text-white mb-4">Today's Deals</h2>
                         <div className="grid grid-cols-3 gap-4 mb-8">
                             {BOXES.map((box, idx) => (
                                 <div key={box.id} className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex flex-col items-center shadow-lg relative overflow-hidden group">
-                                    <div className={`absolute top-0 inset-x-0 h-1 ${box.color}`}></div><Package size={48} className={`mb-3 ${box.id === 'mega' ? 'text-yellow-400' : box.id === 'big' ? 'text-purple-400' : 'text-blue-400'}`} /><h3 className="font-bold text-sm uppercase mb-1">{box.name}</h3><p className="text-[10px] text-slate-400 mb-3">{box.minCoins}-{box.maxCoins} Coins</p>
+                                    <div className={`absolute top-0 inset-x-0 h-1 ${box.color}`}></div>
+                                    <Package size={48} className={`mb-3 ${box.id === 'mega' ? 'text-yellow-400' : box.id === 'big' ? 'text-purple-400' : 'text-blue-400'}`} />
+                                    <h3 className="font-bold text-sm uppercase mb-1">{box.name}</h3>
+                                    <p className="text-[10px] text-slate-400 mb-3">{box.minCoins}-{box.maxCoins} Coins</p>
                                     <button onClick={() => openBox(idx)} disabled={coins < box.price} className={`w-full py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-1 transition-all ${coins >= box.price ? 'bg-yellow-500 text-slate-900 hover:bg-yellow-400 shadow-[0_2px_0_rgb(161,98,7)] active:shadow-none active:translate-y-1' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}>{box.price} <Coins size={12}/></button>
                                 </div>
                             ))}
@@ -1004,10 +1313,11 @@
                         <h2 className="text-2xl font-black italic uppercase text-white mb-4">Brawlers</h2>
                         <div className="space-y-4">
                              {Object.keys(CHARACTERS).map((key) => {
-                                 const type = key; if (unlockedChars.includes(type)) return null; 
+                                 const type = key;
+                                 if (unlockedChars.includes(type)) return null; 
                                  return (
                                      <div key={type} className="bg-slate-800 p-4 rounded-xl flex items-center justify-between border border-slate-700">
-                                         <div className="flex items-center gap-4"><div className="w-14 h-14 bg-slate-900 rounded-lg flex items-center justify-center"><Lock className="text-slate-600" /></div><div><h3 className="font-bold text-lg text-white">{CHARACTERS[type].name}</h3><p className="text-xs text-slate-400">Unlock this brawler</p></div></div>
+                                         <div className="flex items-center gap-4"><div className="w-14 h-14 bg-slate-900 rounded-lg flex items-center justify-center"><Lock className="text-slate-600" /></div><div><h3 className="font-bold text-lg text-white">{CHARACTERS[type].name}</h3><p className="text-xs text-slate-400">Unlock this brawler forever</p></div></div>
                                          <button onClick={() => buyCharacter(type)} disabled={coins < CHARACTERS[type].price} className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${coins >= CHARACTERS[type].price ? 'bg-green-600 hover:bg-green-500 text-white shadow-[0_4px_0_rgb(21,128,61)] active:shadow-none active:translate-y-1' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}>{CHARACTERS[type].price} <Coins size={16} /></button>
                                      </div>
                                  )
@@ -1018,24 +1328,38 @@
                 </div>
               )}
 
-              {screen === 'loading' && <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 z-50"><Loader2 size={64} className="text-yellow-500 animate-spin mb-4" /><h2 className="text-2xl font-bold text-white animate-pulse">Setting the Arena...</h2></div>}
-              {screen === 'game' && map && (
-                <div className="w-full h-full relative">
-                    <GameCanvas map={map} onGameOver={handleGameOver} onExit={() => setScreen('menu')} characterClass={selectedChar} gameMode={selectedMode} inputState={inputRef} difficulty={difficulty}/>
-                    <Joystick side="left" color="#3b82f6" onMove={(x,y,a) => inputRef.current.move = {x,y}} />
-                    <Joystick side="right" color="#ef4444" onMove={(x,y,a) => { if(inputRef.current.aim.active && !a) inputRef.current.shootRequest = true; inputRef.current.aim = {x,y,active:a}; }} />
+              {screen === 'loading' && (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 z-50">
+                   <Loader2 size={64} className="text-yellow-500 animate-spin mb-4" />
+                   <h2 className="text-2xl font-bold text-white animate-pulse">Setting the Arena...</h2>
                 </div>
               )}
+
+              {screen === 'game' && map && (
+                <div className="w-full h-full relative">
+                    <GameCanvas map={map} onGameOver={handleGameOver} onExit={() => setScreen('menu')} characterClass={selectedChar} gameMode={selectedMode} inputState={inputRef} difficulty={difficulty} />
+                    <Joystick side="left" color="#3b82f6" onMove={handleMove} />
+                    <Joystick side="right" color="#ef4444" onMove={handleAim} />
+                </div>
+              )}
+
               {screen === 'result' && (
                 <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/90 z-50 p-6 backdrop-blur-sm">
                     <div className={`p-8 rounded-3xl shadow-2xl text-center border-4 min-w-[320px] ${result === 'win' ? 'border-yellow-500 bg-slate-800' : 'border-red-500 bg-slate-800'}`}>
-                        {result === 'win' ? <><Trophy size={80} className="text-yellow-400 mx-auto mb-4 animate-bounce" /><h2 className="text-6xl font-black text-white mb-2 uppercase tracking-tighter drop-shadow-lg">Victory!</h2></> : <><Skull size={80} className="text-red-500 mx-auto mb-4 animate-pulse" /><h2 className="text-6xl font-black text-white mb-2 uppercase tracking-tighter drop-shadow-lg">Defeat</h2></>}
+                        {result === 'win' ? (
+                            <><Trophy size={80} className="text-yellow-400 mx-auto mb-4 animate-bounce" /><h2 className="text-6xl font-black text-white mb-2 uppercase tracking-tighter drop-shadow-lg">Victory!</h2>{winStreak > 1 && (<div className="flex justify-center mb-4"><div className="flex items-center gap-2 bg-orange-500/20 px-4 py-2 rounded-full border border-orange-500/50 animate-pulse"><Flame className="text-orange-500 fill-orange-500" size={20} /><span className="font-black text-orange-400 uppercase text-sm">Win Streak: {winStreak}</span></div></div>)}</>
+                        ) : (
+                            <><Skull size={80} className="text-red-500 mx-auto mb-4 animate-pulse" /><h2 className="text-6xl font-black text-white mb-2 uppercase tracking-tighter drop-shadow-lg">Defeat</h2></>
+                        )}
                         <div className="flex justify-center gap-4 mb-8">
-                             <div className="bg-slate-900/50 rounded-xl p-3 flex flex-col items-center border border-yellow-500/30 min-w-[100px]"><span className="text-yellow-200 text-xs font-bold uppercase mb-1">Coins</span><div className="flex items-center gap-1"><Coins className="text-yellow-400 fill-yellow-400" size={20}/><span className="text-2xl font-black text-white">+{coins - (parseInt(localStorage.getItem('brawl_coins') || '0') - (coins - xpGained))}</span></div></div>
+                             <div className="bg-slate-900/50 rounded-xl p-3 flex flex-col items-center border border-yellow-500/30 min-w-[100px]"><span className="text-yellow-200 text-xs font-bold uppercase mb-1">Coins</span><div className="flex items-center gap-1"><Coins className="text-yellow-400 fill-yellow-400" size={20}/><span className="text-2xl font-black text-white">+{coinsGained}</span></div>{lastStreakBonus > 0 && (<span className="text-[10px] text-yellow-500 font-bold mt-1">+ {lastStreakBonus} Streak Bonus</span>)}</div>
                              <div className="bg-slate-900/50 rounded-xl p-3 flex flex-col items-center border border-blue-500/30 min-w-[100px]"><span className="text-blue-200 text-xs font-bold uppercase mb-1">XP</span><div className="flex items-center gap-1"><Star className="text-blue-400 fill-blue-400" size={20}/><span className="text-2xl font-black text-white">+{xpGained}</span></div></div>
                         </div>
                         <div className="mb-8 w-full"><div className="flex justify-between text-xs font-bold text-slate-400 mb-1"><span>Level {level}</span><span>{xp} / {getXpForNextLevel(level)} XP</span></div><div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-600"><div className="h-full bg-blue-500" style={{width: `${(xp / getXpForNextLevel(level)) * 100}%`}}></div></div></div>
-                        <div className="flex gap-4 justify-center"><button onClick={() => setScreen('menu')} className="px-8 py-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-white transition-colors">Menu</button><button onClick={handleStartGame} className="px-8 py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-white transition-colors shadow-lg shadow-blue-500/30">Play Again</button></div>
+                        <div className="flex gap-4 justify-center">
+                            <button onClick={() => setScreen('menu')} className="px-8 py-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-white transition-colors">Menu</button>
+                            <button onClick={handleStartGame} className="px-8 py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-white transition-colors shadow-lg shadow-blue-500/30">Play Again</button>
+                        </div>
                     </div>
                 </div>
               )}

@@ -16,7 +16,7 @@ export interface Point {
   y: number;
 }
 
-export type CharacterClass = 'speedy' | 'tank' | 'sniper' | 'ninja' | 'minigun' | 'hunter' | 'tech';
+export type CharacterClass = 'speedy' | 'tank' | 'sniper' | 'ninja' | 'minigun' | 'hunter' | 'tech' | 'spy' | 'golem';
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
 export interface CharacterStats {
@@ -178,5 +178,29 @@ export const CHARACTERS: Record<CharacterClass, CharacterStats> = {
     bulletSpread: 0,
     color: '#0891b2', // Cyan 600
     price: 3500
+  },
+  spy: {
+    name: 'Spy',
+    hp: 550,
+    speed: 5.5,
+    damage: 180,
+    range: 12,
+    reload: 15,
+    bulletCount: 1,
+    bulletSpread: 0,
+    color: '#db2777', // Pink 600
+    price: 4000
+  },
+  golem: {
+    name: 'Golem',
+    hp: 2500,
+    speed: 1.8,
+    damage: 350,
+    range: 9,
+    reload: 55,
+    bulletCount: 1,
+    bulletSpread: 0,
+    color: '#4b5563', // Gray 600
+    price: 5000
   }
 };

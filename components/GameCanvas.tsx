@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { GameMap, TileType, Entity, Bullet, Gem, Point, CharacterClass, GameModeType, CHARACTERS, Difficulty } from '../types';
 import { Home } from 'lucide-react';
@@ -132,7 +133,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     setPlayerMaxHp(pStats.hp);
     setPlayerHp(pStats.hp);
 
-    const availableClasses: CharacterClass[] = ['speedy', 'tank', 'sniper'];
+    const availableClasses: CharacterClass[] = ['speedy', 'tank', 'sniper', 'ninja', 'minigun', 'hunter', 'tech', 'spy', 'golem'];
     
     const createBot = (team: 'player'|'enemy', idx: number, spawnList: Point[]) => {
        const spawn = spawnList[idx % spawnList.length];
@@ -792,6 +793,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.fillStyle = '#333';
         if (ent.stats.name === 'Tank') ctx.fillRect(10, -8, 24, 16); 
         else if (ent.stats.name === 'Sniper') ctx.fillRect(10, -3, 35, 6);
+        else if (ent.stats.name === 'Golem') ctx.fillRect(10, -10, 18, 20); // Golem shape
+        else if (ent.stats.name === 'Spy') ctx.fillRect(10, -2, 16, 4); // Spy shape
         else ctx.fillRect(10, -4, 20, 8);
         ctx.restore();
 
